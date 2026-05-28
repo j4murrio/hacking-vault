@@ -40,7 +40,7 @@ Auditor de seguridad **todo-en-uno por consola** que encadena tus herramientas
 (nmap, httpx, nuclei, ffuf, sqlmap, subfinder, SMB, hydra...) en un solo flujo.
 
 ```bash
-python3 scripts/vulnscan/vulnscan.py 10.10.10.10 --full
+python3 tools/vulnscan/vulnscan.py 10.10.10.10 --full
 ```
 
 | | |
@@ -51,7 +51,7 @@ python3 scripts/vulnscan/vulnscan.py 10.10.10.10 --full
 | 🔎 **DNS** | registros y transferencia de zona |
 | 📄 **Reporte** | hallazgos por severidad + vectores de ataque |
 
-➡️ Guía completa: [`scripts/vulnscan/README.md`](scripts/vulnscan/README.md)
+➡️ Guía completa: [`tools/vulnscan/README.md`](tools/vulnscan/README.md)
 
 ---
 
@@ -78,7 +78,7 @@ git clone <repo> hacking-vault && cd hacking-vault
 wsvenva
 
 # Lanzar un script
-python3 scripts/vulnscan/vulnscan.py <objetivo>
+python3 tools/vulnscan/vulnscan.py <objetivo>
 ```
 
 > 💡 Los resultados de los escaneos se guardan en carpetas locales que el
