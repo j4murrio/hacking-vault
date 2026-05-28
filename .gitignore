@@ -4,6 +4,8 @@
 # ============================================================
 
 # ===== Resultados de escaneos (vulnscan y similares) =====
+reports/
+**/reports/
 vulnscan_*/
 **/vulnscan_*/
 scans/
