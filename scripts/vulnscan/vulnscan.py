@@ -773,6 +773,76 @@ def write_report(outdir, target, started):
 
 
 # ============================================================================
+# Comprobacion de herramientas disponibles
+# ============================================================================
+
+# Todas las herramientas externas que usa el script, agrupadas por capa.
+# Cada entrada: (binario, descripcion, comando_de_instalacion)
+TOOL_CATALOG = [
+    # --- Reconocimiento ---
+    ("nmap",       "Escaneo de puertos y servicios",                "sudo pacman -S nmap"),
+    ("dig",        "DNS: registros + transferencia de zona (AXFR)", "sudo pacman -S bind-tools"),
+    ("subfinder",  "Enumeracion de subdominios",                    "sudo pacman -S subfinder"),
+    ("httpx",      "Fingerprint web (tech, titulo, servidor)",      "sudo pacman -S httpx"),
+    # --- Web ---
+    ("ffuf",       "Fuzzing de directorios web",                    "sudo pacman -S ffuf"),
+    ("nuclei",     "Vulnerabilidades con plantillas",               "sudo pacman -S nuclei"),
+    ("sqlmap",     "SQLi automatizada",                             "sudo pacman -S sqlmap"),
+    # --- SMB / AD ---
+    ("netexec",    "Enumeracion SMB/AD (netexec)",                  "sudo pacman -S netexec"),
+    ("enum4linux", "Enumeracion SMB/Samba",                        "sudo pacman -S enum4linux"),
+    ("smbclient",  "Cliente SMB/CIFS",                             "sudo pacman -S smbclient"),
+    # --- Credenciales ---
+    ("hydra",      "Fuerza bruta SSH/FTP (opt-in)",                "sudo pacman -S hydra"),
+]
+
+# Librerias Python que necesitan estar en el venv.
+PYLIB_CATALOG = [
+    ("requests",       "HTTP client (fases web propias)"),
+    ("bs4",            "HTML parser para el spider (beautifulsoup4)"),
+]
+
+
+def check_tools():
+    """Imprime una tabla con el estado de cada herramienta (instalada / falta)."""
+    print(BANNER)
+    print(f"{C.BOLD}{C.BLUE}  Estado de herramientas{C.RESET}")
+    print(f"{C.BLUE}  {'-' * 62}{C.RESET}\n")
+
+    missing = []
+    print(f"  {'Herramienta':<16} {'Estado':<13} {'Descripcion'}")
+    print(f"  {'-'*16} {'-'*13} {'-'*34}")
+    for binary, desc, install in TOOL_CATALOG:
+        found = tool_exists(binary)
+        icon  = f"{C.GREEN}[OK]{C.RESET}          " if found else f"{C.RED}[FALTA]{C.RESET}       "
+        print(f"  {C.BOLD}{binary:<16}{C.RESET} {icon} {C.GRAY}{desc}{C.RESET}")
+        if not found:
+            missing.append((binary, install))
+
+    print(f"\n  {'Libreria Python':<16} {'Estado':<13} {'Descripcion'}")
+    print(f"  {'-'*16} {'-'*13} {'-'*34}")
+    for lib, desc in PYLIB_CATALOG:
+        try:
+            __import__(lib)
+            found = True
+        except ImportError:
+            found = False
+        icon = f"{C.GREEN}[OK]{C.RESET}          " if found else f"{C.YELLOW}[OPCIONAL]{C.RESET}    "
+        print(f"  {C.BOLD}{lib:<16}{C.RESET} {icon} {C.GRAY}{desc}{C.RESET}")
+        if not found:
+            missing.append((lib, "wsvenva  # activa el venv de trabajo"))
+
+    if missing:
+        print(f"\n{C.YELLOW}  Para instalar lo que falta:{C.RESET}")
+        for name, cmd in missing:
+            print(f"    {C.GRAY}# {name}{C.RESET}")
+            print(f"    {cmd}")
+    else:
+        print(f"\n{C.GREEN}  Todo instalado. Puedes lanzar el escaner.{C.RESET}")
+    print()
+
+
+# ============================================================================
 # Principal
 # ============================================================================
 def main():
@@ -787,7 +857,9 @@ def main():
             "  python3 vulnscan.py objetivo.com --subdomains --dns\n"
         ),
     )
-    p.add_argument("target", help="IP, rango CIDR, dominio o URL")
+    p.add_argument("target", nargs="?", help="IP, rango CIDR, dominio o URL")
+    p.add_argument("--check-tools", action="store_true",
+                   help="Muestra que herramientas estan instaladas y cuales faltan")
     p.add_argument("-o", "--output", help="Carpeta de salida")
     p.add_argument("--full", action="store_true",
                    help="Ejecuta todas las fases razonables (no incluye fuerza bruta)")
@@ -814,6 +886,14 @@ def main():
     p.add_argument("-H", "--header", action="append",
                    help="Cabecera HTTP extra 'Nombre: valor' (repetible)")
     args = p.parse_args()
+
+    # --check-tools no necesita objetivo: muestra el estado y sale.
+    if args.check_tools:
+        check_tools()
+        sys.exit(0)
+
+    if not args.target:
+        p.error("Especifica un objetivo o usa --check-tools para ver el estado.")
 
     print(BANNER)
     if not HAS_REQUESTS:
