@@ -1,0 +1,72 @@
+# ============================================================
+#  Hacking Vault - .gitignore
+#  Evita subir datos generados, temporales o sensibles.
+# ============================================================
+
+# ===== Resultados de escaneos (vulnscan y similares) =====
+vulnscan_*/
+**/vulnscan_*/
+scans/
+results/
+output/
+loot/
+sqlmap/
+**/sqlmap/
+
+# Salidas sueltas de herramientas
+*.nmap
+*.gnmap
+ffuf_*.json
+nuclei_*.txt
+hydra_*.txt
+enum4linux_*.txt
+netexec_*.txt
+smbclient_*.txt
+
+# Ficheros temporales del script (empiezan por "_")
+_*.txt
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ===== Datos sensibles (nunca subir) =====
+.env
+*.env
+*.key
+*.pem
+*.pfx
+*.ovpn
+*.kdbx
+credentials*
+secrets*
+
+# ===== Wordlists grandes =====
+rockyou.txt
+*rockyou*
+# Descomenta si NO quieres versionar tus wordlists:
+# wordlists/*.txt
+
+# ===== Logs y temporales =====
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+
+# ===== Sistema operativo =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Editores / IDEs =====
+.vscode/
+.idea/
+*.sublime-*

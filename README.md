@@ -1,86 +1,104 @@
+<div align="center">
+
 # 🔐 Hacking Vault
 
-Repositorio personal de herramientas, scripts y recursos para pentesting y seguridad informática.
+**Mi arsenal personal de pentesting y seguridad ofensiva**
 
-## ⚠️ Disclaimer
+Scripts · Exploits · Herramientas · Notas · Recursos
 
-Este repositorio contiene herramientas y scripts con fines **exclusivamente educativos y de investigación en seguridad**. El uso indebido de estas herramientas puede ser ilegal. Solo deben utilizarse en sistemas donde tengas autorización explícita para realizar pruebas de seguridad.
-
-**El autor no se hace responsable del mal uso de este contenido.**
-
-## 📁 Estructura del Repositorio
-
-```
-hacking-vault/
-├── scripts/           # Scripts personalizados
-├── exploits/          # Exploits y POCs
-├── wordlists/         # Diccionarios y listas personalizadas
-├── tools/             # Herramientas y utilidades
-├── notes/             # Notas y metodologías
-├── configs/           # Configuraciones útiles
-└── cheatsheets/       # Hojas de referencia rápida
-```
-
-## 🛠️ Categorías
-
-### Reconocimiento
-- Escaneo de puertos y servicios
-- Enumeración de subdominios
-- Recopilación de información (OSINT)
-
-### Explotación
-- Exploits personalizados
-- Payloads y shells
-- Scripts de post-explotación
-
-### Web Security
-- Herramientas para SQLi, XSS, CSRF
-- Scanners personalizados
-- Bypass de WAF
-
-### Password Cracking
-- Scripts de fuerza bruta
-- Wordlists personalizadas
-- Herramientas de hash cracking
-
-### Privilege Escalation
-- Enumeración de sistema
-- Exploits locales
-- Scripts de escalada
-
-### Wireless
-- Herramientas WiFi
-- Scripts para captura de handshakes
-- Análisis de tráfico
-
-## 🚀 Uso Rápido
-
-```bash
-# Clonar el repositorio
-git clone https://github.com/tu-usuario/hacking-vault.git
-
-# Dar permisos de ejecución a los scripts
-chmod +x scripts/*.sh
-
-# Ejecutar un script ejemplo
-./scripts/nombre-script.sh
-```
-
-## 📝 Contribuciones
-
-Este es un repositorio personal, pero si tienes sugerencias o mejoras, siéntete libre de abrir un issue o pull request.
-
-## 🔗 Recursos Útiles
-
-- [HackTricks](https://book.hacktricks.xyz/)
-- [GTFOBins](https://gtfobins.github.io/)
-- [PayloadsAllTheThings](https://github.com/swisskyrepo/PayloadsAllTheThings)
-- [OWASP](https://owasp.org/)
-
-## 📜 Licencia
-
-Este proyecto está bajo la licencia MIT para fines educativos.
+</div>
 
 ---
 
-**Recuerda:** Hackea éticamente, siempre con permiso. 🎯
+## ⚠️ Solo uso autorizado
+
+> Todo esto es para **fines educativos** y para sistemas en los que tengas
+> **permiso explícito** (labs, HTB/TryHackMe, CTFs, engagements con contrato).
+> El mal uso es ilegal. El autor no se responsabiliza del uso indebido.
+
+---
+
+## 📁 Estructura
+
+```
+hacking-vault/
+│
+├── 🐍 scripts/       Scripts propios (recon, escaneo, automatización)
+├── 💥 exploits/      Exploits y pruebas de concepto (PoC)
+├── 📖 wordlists/     Diccionarios y listas personalizadas
+├── 🧰 tools/         Herramientas y utilidades de terceros
+├── 📝 notes/         Metodologías y apuntes
+├── ⚙️  configs/       Configuraciones útiles
+└── 📑 cheatsheets/   Hojas de referencia rápida
+```
+
+---
+
+## ⭐ Destacado: `vulnscan`
+
+Auditor de seguridad **todo-en-uno por consola** que encadena tus herramientas
+(nmap, httpx, nuclei, ffuf, sqlmap, subfinder, SMB, hydra...) en un solo flujo.
+
+```bash
+python3 scripts/vulnscan/vulnscan.py 10.10.10.10 --full
+```
+
+| | |
+|---|---|
+| 🌐 **Red** | puertos y servicios con nmap |
+| 🕸️ **Web** | fingerprint, cabeceras, TLS, XSS/SQLi, fuzzing |
+| 🪟 **SMB/AD** | sesiones nulas, recursos, usuarios |
+| 🔎 **DNS** | registros y transferencia de zona |
+| 📄 **Reporte** | hallazgos por severidad + vectores de ataque |
+
+➡️ Guía completa: [`scripts/vulnscan/README.md`](scripts/vulnscan/README.md)
+
+---
+
+## 🎯 ¿Para qué sirve cada cosa?
+
+| Categoría | Qué guardo aquí |
+|-----------|-----------------|
+| 🔍 **Reconocimiento** | escaneo de puertos, subdominios, OSINT |
+| 💥 **Explotación** | exploits, payloads, shells |
+| 🕸️ **Web** | SQLi, XSS, CSRF, scanners |
+| 🔑 **Credenciales** | fuerza bruta, cracking de hashes |
+| ⬆️ **Escalada** | enumeración local y privesc |
+| 📡 **Redes/Wireless** | captura y análisis de tráfico |
+
+---
+
+## 🚀 Uso rápido
+
+```bash
+# Clonar
+git clone <repo> hacking-vault && cd hacking-vault
+
+# Activar el entorno Python (archpwm)
+wsvenva
+
+# Lanzar un script
+python3 scripts/vulnscan/vulnscan.py <objetivo>
+```
+
+> 💡 Los resultados de los escaneos se guardan en carpetas locales que el
+> `.gitignore` **excluye automáticamente** del repositorio.
+
+---
+
+## 🔗 Recursos útiles
+
+- 📚 [HackTricks](https://book.hacktricks.xyz/)
+- 🐧 [GTFOBins](https://gtfobins.github.io/)
+- 🎒 [PayloadsAllTheThings](https://github.com/swisskyrepo/PayloadsAllTheThings)
+- 🛡️ [OWASP](https://owasp.org/)
+
+---
+
+<div align="center">
+
+📜 Licencia MIT · con fines educativos
+
+**Hackea con ética, siempre con permiso.** 🎯
+
+</div>
