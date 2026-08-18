@@ -55,6 +55,24 @@ python3 tools/vulnscan/vulnscan.py 10.10.10.10 --full
 
 ---
 
+## 🧪 Scripts incluidos
+
+Utilidades propias, **solo stdlib de Python** (sin `pip`) y autodocumentadas (`-h`).
+Complementan las funciones de archpwm y `vulnscan`, sin duplicarlas.
+
+| Script | Para qué |
+|--------|----------|
+| `scripts/crypto/magic-decode.py` | Pela capas anidadas (base64/32/85, hex, URL, ROT13, binario, decimal, morse, gzip/zlib) hasta dar con texto o flag |
+| `scripts/crypto/classic-cipher.py` | Cifras clásicas de CTF: César/ROT, XOR (brute y clave), Vigenère, Atbash, rail fence, frecuencias |
+| `scripts/crypto/hashid.py` | Identifica un hash y da el comando `hashcat`/`john` |
+| `scripts/recon/portscan.py` | Escáner TCP con hilos para cajas sin nmap |
+| `scripts/recon/webenum.py` | Recon web rápido de un host (cabeceras, cookies, métodos, rutas) |
+| `scripts/shells/revshell.py` | Reverse shells portables (9 intérpretes) + listener |
+
+➡️ Detalle: [`scripts/README.md`](scripts/README.md) · Cheatsheets: [`cheatsheets/`](cheatsheets/) · Metodología: [`notes/methodology.md`](notes/methodology.md)
+
+---
+
 ## 🎯 ¿Para qué sirve cada cosa?
 
 | Categoría | Qué guardo aquí |

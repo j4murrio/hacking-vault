@@ -6,6 +6,11 @@ Part of [hacking-vault](https://github.com/j4murrio/hacking-vault) —
 built to run on the [archpwm](https://github.com/j4murrio/archpwm) hacking
 environment, but fully usable on any Linux system with the tools installed.
 
+**Uses:** Python 3 (`requests`, `beautifulsoup4`) · `nmap` · `httpx` · `nuclei` ·
+`ffuf` · `sqlmap` · `subfinder` · `dig` · `netexec` · `enum4linux` · `smbclient` ·
+`hydra`. Only `nmap` is required — every other phase self-skips if its tool is
+missing (`python3 vulnscan.py --check-tools` to see what is installed).
+
 ---
 
 ## ⚠️ Legal notice
