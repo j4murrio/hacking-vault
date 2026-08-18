@@ -46,6 +46,7 @@ import socket
 import ssl
 import subprocess
 import sys
+import threading
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from urllib.parse import urljoin, urlparse, parse_qs, urlencode, urlunparse
@@ -127,6 +128,30 @@ def add_suggestion(text):
 # ============================================================================
 # Execution helpers
 # ============================================================================
+# Per-phase time caps (seconds) so a single hung tool cannot stall the whole
+# audit. --tool-timeout overrides them all (0 = no limit).
+TIMEOUTS = {
+    "dig":       60,
+    "subfinder": 600,
+    "httpx":     600,
+    "nmap":      1800,
+    "nmap_vuln": 2400,
+    "smb":       600,
+    "ffuf":      1200,
+    "sqlmap":    1800,
+    "nuclei":    1800,
+    "hydra":     1800,
+}
+TIMEOUT_OVERRIDE = None   # set from --tool-timeout; 0 means unlimited
+
+
+def phase_timeout(key):
+    """Effective timeout for a phase, honouring a --tool-timeout override."""
+    if TIMEOUT_OVERRIDE is not None:
+        return TIMEOUT_OVERRIDE or None
+    return TIMEOUTS.get(key)
+
+
 def tool_exists(name):
     return shutil.which(name) is not None
 
@@ -140,28 +165,47 @@ def first_tool(*names):
 
 
 def run(cmd, logfile=None, timeout=None):
-    """Run an external command, stream its output live, and optionally save it."""
+    """Run an external command, stream its output live, and optionally save it.
+
+    A watchdog kills the process if it exceeds `timeout` seconds, so a single
+    hung tool cannot stall the whole audit.
+    """
     print(f"{C.GRAY}    $ {' '.join(cmd)}{C.RESET}")
-    lines = []
-    proc  = None
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, text=True, bufsize=1)
-        for line in proc.stdout:
-            sys.stdout.write(f"{C.GRAY}    {line}{C.RESET}")
-            lines.append(line)
-        proc.wait(timeout=timeout)
     except FileNotFoundError:
         err(f"Binary not found: {cmd[0]}")
         return 127, ""
-    except subprocess.TimeoutExpired:
-        proc.kill()
-        warn(f"Timed out: {cmd[0]}")
+
+    timed_out = False
+    watchdog  = None
+    if timeout:
+        def _kill():
+            nonlocal timed_out
+            timed_out = True
+            proc.kill()
+        watchdog = threading.Timer(timeout, _kill)
+        watchdog.daemon = True
+        watchdog.start()
+
+    lines = []
+    try:
+        for line in proc.stdout:
+            sys.stdout.write(f"{C.GRAY}    {line}{C.RESET}")
+            lines.append(line)
+        proc.wait()
+    finally:
+        if watchdog:
+            watchdog.cancel()
+
+    if timed_out:
+        warn(f"Timed out after {timeout}s: {cmd[0]}")
     output = "".join(lines)
     if logfile:
         with open(logfile, "w", encoding="utf-8", errors="replace") as f:
             f.write(output)
-    return (proc.returncode if proc else 1), output
+    return (proc.returncode if proc.returncode is not None else 1), output
 
 
 # ============================================================================
@@ -210,13 +254,15 @@ def dns_recon(domain, outdir):
         return
     log = []
     for rtype in ("A", "AAAA", "MX", "NS", "TXT", "SOA"):
-        code, out = run(["dig", "+short", rtype, domain])
+        code, out = run(["dig", "+short", rtype, domain],
+                        timeout=phase_timeout("dig"))
         if out.strip():
             log.append(f"== {rtype} ==\n{out.strip()}")
             add_finding("info", f"DNS {rtype}", out.strip().replace("\n", " "))
-    _, ns_out = run(["dig", "+short", "NS", domain])
+    _, ns_out = run(["dig", "+short", "NS", domain], timeout=phase_timeout("dig"))
     for ns in [n.strip(".") for n in ns_out.split() if n.strip()]:
-        code, axfr = run(["dig", "AXFR", f"@{ns}", domain])
+        code, axfr = run(["dig", "AXFR", f"@{ns}", domain],
+                         timeout=phase_timeout("dig"))
         log.append(f"== AXFR @{ns} ==\n{axfr}")
         if "Transfer failed" not in axfr and re.search(r"\bIN\b.*\b(A|CNAME|MX)\b", axfr):
             vuln(f"Zone transfer allowed on {ns}!")
@@ -239,7 +285,8 @@ def enum_subdomains(domain, outdir):
         warn("subfinder not found; skipping subdomain enumeration.")
         return []
     subs = os.path.join(outdir, "subdomains.txt")
-    run(["subfinder", "-d", domain, "-silent", "-o", subs])
+    run(["subfinder", "-d", domain, "-silent", "-o", subs],
+        timeout=phase_timeout("subfinder"))
     if not os.path.exists(subs) or os.path.getsize(subs) == 0:
         warn("subfinder returned no results.")
         return []
@@ -248,7 +295,8 @@ def enum_subdomains(domain, outdir):
     live = []
     if tool_exists("httpx"):
         live_file = os.path.join(outdir, "subdomains_live.txt")
-        run(["httpx", "-l", subs, "-silent", "-o", live_file])
+        run(["httpx", "-l", subs, "-silent", "-o", live_file],
+            timeout=phase_timeout("httpx"))
         if os.path.exists(live_file):
             live = [l.strip() for l in open(live_file, encoding="utf-8",
                     errors="replace") if l.strip()]
@@ -277,7 +325,8 @@ def run_nmap(target, outdir, full=False, vuln_scripts=False):
     port_spec = ["-p-"] if full else ["--top-ports", "1000"]
     info("Discovering open ports...")
     run(["nmap"] + port_spec + ["-T4", "--min-rate", "2000", "-oX", disc_xml, target],
-        logfile=os.path.join(outdir, "nmap_discovery.txt"))
+        logfile=os.path.join(outdir, "nmap_discovery.txt"),
+        timeout=phase_timeout("nmap"))
 
     open_ports = ports_from_xml(disc_xml)
     if not open_ports:
@@ -289,7 +338,8 @@ def run_nmap(target, outdir, full=False, vuln_scripts=False):
     det_xml = os.path.join(outdir, "nmap_detailed.xml")
     info("Detailed scan (-sV -sC) on open ports...")
     run(["nmap", "-sV", "-sC", "-p", ports_csv, "-oX", det_xml,
-         "-oN", os.path.join(outdir, "nmap_detailed.txt"), target])
+         "-oN", os.path.join(outdir, "nmap_detailed.txt"), target],
+        timeout=phase_timeout("nmap"))
     hosts = parse_nmap_hosts(det_xml)
 
     for ip, services in hosts.items():
@@ -301,7 +351,8 @@ def run_nmap(target, outdir, full=False, vuln_scripts=False):
     if vuln_scripts:
         phase("NETWORK - nmap vuln scripts (--script vuln)")
         vuln_out = os.path.join(outdir, "nmap_vuln.txt")
-        run(["nmap", "--script", "vuln", "-p", ports_csv, "-oN", vuln_out, target])
+        run(["nmap", "--script", "vuln", "-p", ports_csv, "-oN", vuln_out, target],
+            timeout=phase_timeout("nmap_vuln"))
         parse_nmap_vuln(vuln_out, target)
     return hosts
 
@@ -331,7 +382,9 @@ def parse_nmap_hosts(xml_path):
     except ET.ParseError:
         return hosts
     for host in root.iter("host"):
-        addr = host.find("address")
+        addr = next((a for a in host.findall("address")
+                     if a.get("addrtype") in ("ipv4", "ipv6")),
+                    host.find("address"))
         if addr is None:
             continue
         ip       = addr.get("addr")
@@ -389,7 +442,8 @@ def audit_smb(host, outdir):
     if nxc:
         info("netexec: host info and shares (null session)...")
         code, out = run([nxc, "smb", host, "-u", "", "-p", "", "--shares"],
-                        logfile=os.path.join(outdir, f"netexec_{host}.txt"))
+                        logfile=os.path.join(outdir, f"netexec_{host}.txt"),
+                        timeout=phase_timeout("smb"))
         if re.search(r"READ|WRITE", out):
             add_finding("medium", "SMB shares accessible via null session", host=host)
         m = re.search(r"\(domain:([^)]+)\)", out)
@@ -407,12 +461,14 @@ def audit_smb(host, outdir):
     if tool_exists("smbclient"):
         info("smbclient: listing shares (null session)...")
         run(["smbclient", "-L", f"//{host}/", "-N"],
-            logfile=os.path.join(outdir, f"smbclient_{host}.txt"))
+            logfile=os.path.join(outdir, f"smbclient_{host}.txt"),
+            timeout=phase_timeout("smb"))
 
     if tool_exists("enum4linux"):
         info("enum4linux: full enumeration...")
         run(["enum4linux", "-a", host],
-            logfile=os.path.join(outdir, f"enum4linux_{host}.txt"))
+            logfile=os.path.join(outdir, f"enum4linux_{host}.txt"),
+            timeout=phase_timeout("smb"))
     else:
         warn("enum4linux not found.")
 
@@ -436,12 +492,13 @@ SQL_ERRORS  = re.compile(
 )
 
 
-def recon_httpx(url, outdir):
+def recon_httpx(url, outdir, idx=0):
     if not tool_exists("httpx"):
         return
-    out = os.path.join(outdir, "httpx.txt")
+    out = os.path.join(outdir, f"httpx_{idx}.txt")
     code, output = run(["httpx", "-u", url, "-silent", "-title", "-status-code",
-                        "-tech-detect", "-web-server", "-o", out])
+                        "-tech-detect", "-web-server", "-o", out],
+                       timeout=phase_timeout("httpx"))
     for line in output.strip().splitlines():
         if line.strip():
             add_finding("info", "Web fingerprint", line.strip())
@@ -463,7 +520,8 @@ def web_check_headers(url, session):
         problems = []
         if not c.secure:
             problems.append("missing Secure flag")
-        if not c.has_nonstandard_attr("HttpOnly"):
+        if not (c.has_nonstandard_attr("HttpOnly")
+                or c.has_nonstandard_attr("httponly")):
             problems.append("missing HttpOnly flag")
         if problems:
             add_finding("low", f"Insecure cookie '{c.name}'", ", ".join(problems))
@@ -568,7 +626,7 @@ def web_test_injections(param_urls, session):
         return
     for url in param_urls:
         parsed = urlparse(url)
-        params = parse_qs(parsed.query)
+        params = parse_qs(parsed.query, keep_blank_values=True)
         for param in params:
             _test_xss(parsed, params, param, session)
             _test_sqli(parsed, params, param, session)
@@ -617,7 +675,7 @@ def run_sqlmap(param_urls, outdir, cookie=None):
                "--output-dir", os.path.join(outdir, "sqlmap")]
         if cookie:
             cmd += ["--cookie", cookie]
-        code, output = run(cmd)
+        code, output = run(cmd, timeout=phase_timeout("sqlmap"))
         if re.search(r"is vulnerable|parameter.*injectable", output, re.IGNORECASE):
             vuln("sqlmap confirmed injection!")
             add_finding("critical", "SQLi confirmed by sqlmap", url)
@@ -633,7 +691,8 @@ def run_ffuf(url, outdir, wordlist, idx=0):
         return
     out = os.path.join(outdir, f"ffuf_{idx}.json")
     run(["ffuf", "-u", f"{url}/FUZZ", "-w", wordlist,
-         "-mc", "200,204,301,302,307,401,403", "-of", "json", "-o", out, "-s"])
+         "-mc", "200,204,301,302,307,401,403", "-of", "json", "-o", out, "-s"],
+        timeout=phase_timeout("ffuf"))
     if os.path.exists(out):
         try:
             data = json.load(open(out, encoding="utf-8"))
@@ -648,7 +707,7 @@ def audit_web(url, session, outdir, args, idx=0):
     """Full web audit pipeline for a single URL."""
     phase(f"WEB - auditing {url}")
     host = urlparse(url).netloc.split(":")[0]
-    recon_httpx(url, outdir)
+    recon_httpx(url, outdir, idx)
     if session:
         web_check_headers(url, session)
         if url.startswith("https"):
@@ -686,7 +745,7 @@ def run_nuclei(urls, outdir, severity=None):
     cmd = ["nuclei", "-l", list_file, "-o", out, "-stats"]
     if severity:
         cmd += ["-severity", severity]
-    run(cmd)
+    run(cmd, timeout=phase_timeout("nuclei"))
     if os.path.exists(out):
         for line in open(out, encoding="utf-8", errors="replace"):
             line = line.strip()
@@ -727,7 +786,7 @@ def run_hydra(host, services, outdir, userlist=None, passlist=None):
             "hydra", "-L", userlist, "-P", passlist, "-t", "4", "-f",
             "-o", os.path.join(outdir, f"hydra_{service}_{host}.txt"),
             "-s", str(port), host, service,
-        ])
+        ], timeout=phase_timeout("hydra"))
         for m in re.finditer(r"login:\s*(\S+)\s+password:\s*(\S+)", out):
             vuln(f"Valid {service} credentials: {m.group(1)}:{m.group(2)}")
             add_finding("critical", f"Valid {service} credentials",
@@ -750,7 +809,7 @@ def write_report(outdir, target, started):
     lines = [
         f"# Vulnerability Report - {target}", "",
         f"- **Date:** {started:%Y-%m-%d %H:%M:%S}",
-        f"- **Duration:** {(datetime.now() - started).seconds}s",
+        f"- **Duration:** {int((datetime.now() - started).total_seconds())}s",
         f"- **Output folder:** `{outdir}`", "",
         "## Summary by severity", "",
         "| Severity | Findings |", "|----------|----------|",
@@ -790,7 +849,7 @@ def write_report(outdir, target, started):
 
 def print_summary(target, report, counts, started):
     """Print a visual vulnerability summary to the console."""
-    duration = (datetime.now() - started).seconds
+    duration = int((datetime.now() - started).total_seconds())
     phase("SCAN SUMMARY")
 
     # ── Header ────────────────────────────────────────────────────────────────
@@ -957,7 +1016,8 @@ def main():
     p.add_argument("-o", "--output",
                    help="Output folder (default: reports/<host>_<timestamp>)")
     p.add_argument("--full", action="store_true",
-                   help="Run all reasonable phases (excludes brute-force)")
+                   help="Run all reasonable phases (excludes brute-force and "
+                        "vuln-scripts)")
     p.add_argument("--ports-full", action="store_true",
                    help="Scan all 65535 ports with nmap")
     p.add_argument("--vuln-scripts", action="store_true",
@@ -980,6 +1040,9 @@ def main():
                    help="SSH/FTP brute-force with hydra (NOISY, opt-in)")
     p.add_argument("--no-nuclei", action="store_true",
                    help="Skip nuclei vulnerability scan")
+    p.add_argument("--tool-timeout", type=int, metavar="SECONDS",
+                   help="Per-tool time cap overriding built-in defaults "
+                        "(0 = no limit)")
     p.add_argument("--wordlist",
                    default="/usr/share/seclists/Discovery/Web-Content/common.txt",
                    help="Wordlist for directory fuzzing")
@@ -994,6 +1057,10 @@ def main():
     p.add_argument("-H", "--header", action="append",
                    help="Extra HTTP header 'Name: value' (repeatable)")
     args = p.parse_args()
+
+    if args.tool_timeout is not None:
+        global TIMEOUT_OVERRIDE
+        TIMEOUT_OVERRIDE = args.tool_timeout
 
     if args.check_tools:
         check_tools()

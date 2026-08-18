@@ -203,6 +203,7 @@ python3 vulnscan.py 10.10.10.10 --bruteforce \
 | `--smb` / `--no-smb` | Force / disable SMB enumeration |
 | `--bruteforce` | SSH/FTP brute-force with hydra (opt-in, noisy) |
 | `--no-nuclei` | Skip nuclei scan |
+| `--tool-timeout` | Per-tool time cap in seconds, overriding built-in defaults (`0` = no limit) |
 | `--wordlist` | Wordlist for fuzzing (default: SecLists `common.txt`) |
 | `--userlist` / `--passlist` | Lists for hydra (small built-in defaults if omitted) |
 | `--severity` | Filter nuclei by severity (e.g. `critical,high`) |
@@ -226,7 +227,7 @@ reports/10.10.10.10_20260528_101500/
 ├── netexec_<ip>.txt       SMB enumeration
 ├── enum4linux_<ip>.txt    SMB/Samba full enum
 ├── smbclient_<ip>.txt     share listing
-├── httpx.txt              web fingerprint
+├── httpx_*.txt            web fingerprint (one file per web target)
 ├── ffuf_*.json            directory fuzzing results
 ├── nuclei.txt             vulnerability findings
 ├── sqlmap/                sqlmap output directory
@@ -247,4 +248,5 @@ The `reports/` folder is excluded from git by the project's `.gitignore`.
 | Default wordlist missing | `sudo pacman -S seclists` (archpwm) · `sudo apt install seclists` (Debian) · or `--wordlist <path>` |
 | nmap scan is slow / incomplete | Run with `sudo` (raw socket scans need root) |
 | `--sqli` or `--fuzz` take too long | Normal for deep scans — interrupt with `Ctrl+C` and check partial results |
+| A phase hangs on one tool | Each external tool has a time cap; tune it with `--tool-timeout <seconds>` (`0` = no limit) |
 | SMB enum auto-triggered | Add `--no-smb` to skip it |
