@@ -4,7 +4,7 @@
 
 **Mi arsenal personal de pentesting y seguridad ofensiva**
 
-Scripts · Exploits · Herramientas · Notas · Recursos
+OSINT · Recon · Scan · Crypto · Shells — con menú de terminal y consola web
 
 </div>
 
@@ -20,17 +20,41 @@ Scripts · Exploits · Herramientas · Notas · Recursos
 
 ## 📁 Estructura
 
+Solo herramientas. Todo es **Python stdlib** (sin `pip`), un archivo por herramienta
+y autodocumentado (`-h`).
+
 ```
 hacking-vault/
 │
-├── 🐍 scripts/       Scripts propios (recon, escaneo, automatización)
-├── 💥 exploits/      Exploits y pruebas de concepto (PoC)
-├── 📖 wordlists/     Diccionarios y listas personalizadas
-├── 🧰 tools/         Herramientas y utilidades de terceros
-├── 📝 notes/         Metodologías y apuntes
-├── ⚙️  configs/       Configuraciones útiles
-└── 📑 cheatsheets/   Hojas de referencia rápida
+├── 🚀 hvault.py      Lanzador unificado: menú de terminal + consola web
+├── 🧩 hvault/        Núcleo del lanzador (registro declarativo, menú, web, runner)
+├── 🐍 scripts/       Herramientas por categoría
+│   ├── osint/        OSINT pasivo: crt.sh, hunt de usuario, footprint DNS/WHOIS
+│   ├── recon/        Recon activo: puertos sin nmap, DNS/AXFR, web
+│   ├── crypto/       Cripto/CTF: magic-decode, cifras clásicas, hashid
+│   └── shells/       Reverse shells + listener
+└── 🧰 tools/
+    └── vulnscan/     Auditor todo-en-uno que encadena tus herramientas
 ```
+
+---
+
+## 🚀 Lanzador unificado
+
+Una sola puerta de entrada a todas las herramientas, desde un menú de terminal o una
+consola web local. Sin dependencias.
+
+```bash
+python3 hvault.py              # menú interactivo en terminal (por defecto)
+python3 hvault.py web          # consola web local, se abre en el navegador
+python3 hvault.py list         # lista todas las herramientas y su id
+python3 hvault.py run osint.crtsh example.com --live   # ejecuta una directamente
+```
+
+La consola web escucha **solo en loopback** y protege cada petición con una clave
+aleatoria que va en la URL: nada fuera de tu máquina puede usarla. Cada herramienta
+sigue siendo usable por su cuenta (`python3 scripts/osint/crtsh.py ...`); el lanzador
+es una capa de comodidad por encima. Detalle: [`hvault/README.md`](hvault/README.md).
 
 ---
 
@@ -40,7 +64,7 @@ Auditor de seguridad **todo-en-uno por consola** que encadena tus herramientas
 (nmap, httpx, nuclei, ffuf, sqlmap, subfinder, SMB, hydra...) en un solo flujo.
 
 ```bash
-python3 tools/vulnscan/vulnscan.py 10.10.10.10 --full
+python3 tools/vulnscan/vulnscan.py <objetivo> --full
 ```
 
 | | |
@@ -55,34 +79,37 @@ python3 tools/vulnscan/vulnscan.py 10.10.10.10 --full
 
 ---
 
-## 🧪 Scripts incluidos
+## 🧰 Herramientas incluidas
 
-Utilidades propias, **solo stdlib de Python** (sin `pip`) y autodocumentadas (`-h`).
-Complementan las funciones de archpwm y `vulnscan`, sin duplicarlas.
+| Herramienta | Categoría | Para qué |
+|-------------|-----------|----------|
+| `scripts/osint/crtsh.py` | OSINT | Subdominios pasivos desde Certificate Transparency (crt.sh) |
+| `scripts/osint/username-hunt.py` | OSINT | Dónde está registrado un usuario en ~30 sitios públicos |
+| `scripts/osint/footprint.py` | OSINT | Footprint pasivo: DNS (sobre HTTPS) + WHOIS |
+| `scripts/recon/dnsrecon.py` | Recon | Registros DNS, intento de AXFR y brute de subdominios |
+| `scripts/recon/portscan.py` | Recon | Escáner TCP con hilos para cajas sin nmap |
+| `scripts/recon/webenum.py` | Recon | Recon web rápido (cabeceras, cookies, métodos, rutas) |
+| `scripts/crypto/magic-decode.py` | Cripto/CTF | Pela capas de codificación hasta dar con texto o flag |
+| `scripts/crypto/classic-cipher.py` | Cripto/CTF | César/XOR/Vigenère/Atbash/railfence/frecuencias con scoring |
+| `scripts/crypto/hashid.py` | Credenciales | Identifica un hash y da el comando `hashcat`/`john` |
+| `scripts/shells/revshell.py` | Explotación | Reverse shells por varios intérpretes + listener |
+| `tools/vulnscan/vulnscan.py` | Scan | Auditor todo-en-uno (red, web, SMB/AD, nuclei, fuzzing, reporte) |
 
-| Script | Para qué |
-|--------|----------|
-| `scripts/crypto/magic-decode.py` | Pela capas anidadas (base64/32/85, hex, URL, ROT13, binario, decimal, morse, gzip/zlib) hasta dar con texto o flag |
-| `scripts/crypto/classic-cipher.py` | Cifras clásicas de CTF: César/ROT, XOR (brute y clave), Vigenère, Atbash, rail fence, frecuencias |
-| `scripts/crypto/hashid.py` | Identifica un hash y da el comando `hashcat`/`john` |
-| `scripts/recon/portscan.py` | Escáner TCP con hilos para cajas sin nmap |
-| `scripts/recon/webenum.py` | Recon web rápido de un host (cabeceras, cookies, métodos, rutas) |
-| `scripts/shells/revshell.py` | Reverse shells portables (9 intérpretes) + listener |
-
-➡️ Detalle: [`scripts/README.md`](scripts/README.md) · Cheatsheets: [`cheatsheets/`](cheatsheets/) · Metodología: [`notes/methodology.md`](notes/methodology.md)
+➡️ Detalle por categoría: [`scripts/README.md`](scripts/README.md) ·
+[`osint/`](scripts/osint/README.md) · [`recon/`](scripts/recon/README.md) ·
+[`crypto/`](scripts/crypto/README.md) · [`shells/`](scripts/shells/README.md)
 
 ---
 
-## 🎯 ¿Para qué sirve cada cosa?
+## 🎯 ¿Qué cubre cada categoría?
 
-| Categoría | Qué guardo aquí |
-|-----------|-----------------|
-| 🔍 **Reconocimiento** | escaneo de puertos, subdominios, OSINT |
-| 💥 **Explotación** | exploits, payloads, shells |
-| 🕸️ **Web** | SQLi, XSS, CSRF, scanners |
-| 🔑 **Credenciales** | fuerza bruta, cracking de hashes |
-| ⬆️ **Escalada** | enumeración local y privesc |
-| 📡 **Redes/Wireless** | captura y análisis de tráfico |
+| Categoría | Qué hay aquí |
+|-----------|--------------|
+| 🕵️ **OSINT** | reconocimiento pasivo: subdominios, usuarios, DNS/WHOIS |
+| 🔍 **Recon** | escaneo de puertos, DNS/AXFR, recon web activo |
+| 🛡️ **Scan** | auditoría encadenada con `vulnscan` |
+| 🧩 **Cripto/CTF** | decodificación, cifras clásicas, identificación de hashes |
+| 🐚 **Shells** | reverse shells y listeners |
 
 ---
 
@@ -92,11 +119,12 @@ Complementan las funciones de archpwm y `vulnscan`, sin duplicarlas.
 # Clonar
 git clone <repo> hacking-vault && cd hacking-vault
 
-# Activar el entorno Python (archpwm)
+# (archpwm) activar el entorno Python si lo usas para las herramientas de terceros
 wsvenva
 
-# Lanzar un script
-python3 tools/vulnscan/vulnscan.py <objetivo>
+# Menú para todo, o una herramienta directa
+python3 hvault.py
+python3 tools/vulnscan/vulnscan.py <objetivo> --full
 ```
 
 > 💡 Los resultados de los escaneos se guardan en carpetas locales que el
