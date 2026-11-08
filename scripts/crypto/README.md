@@ -24,6 +24,24 @@ echo "<blob>" | python3 magic-decode.py - --all   # one layer, every codec
 
 ---
 
+## `encode.py` - the encoder (inverse of magic-decode)
+
+**What it does:** the forward direction - turns text into base64/base64url/base32/hex,
+URL-encoding, ROT13, binary, decimal, HTML entities, reversed or gzip+base64. Handy for
+building a payload or an expected value to match.
+
+**How it works:** one codec per subcommand; running it with **no subcommand** (or `all`)
+applies every codec at once and prints each result, so you can eyeball which form a
+challenge wants. `rot` takes an explicit shift (`rot -n 5`).
+
+```bash
+python3 encode.py base64 "flag{hello}"      # one codec
+python3 encode.py "flag{hello}"             # all codecs at once (default)
+python3 encode.py rot -n 13 "uryyb"         # ROT with an explicit shift
+```
+
+---
+
 ## `classic-cipher.py` - classic cipher toolkit
 
 **What it does:** decrypts or brute-forces the classic ciphers: Caesar/ROT, XOR
@@ -35,10 +53,36 @@ with an English/flag heuristic (common letters, `flag{...}` markers, frequent n-
 transposition), so the real plaintext floats to the top of the list instead of leaving you
 to eyeball 256 outputs.
 
+With **no subcommand** (or `all`) it throws every keyless attack at the input - 26 Caesar
+shifts, Atbash, all 256 single-byte XOR keys and rail fence 2..10 - and prints the
+best-scoring candidates first. Reach for a named subcommand only when you need a key
+(Vigenere, repeating-key XOR) or raw frequency counts.
+
 ```bash
+python3 classic-cipher.py "iodj{khoor}"               # all keyless attacks, ranked
 python3 classic-cipher.py caesar "iodj{khoor}"        # brute, ranked
 python3 classic-cipher.py xor --brute --hex "$(cat c.hex)"
 python3 classic-cipher.py vigenere -k LEMON "rijvs..."
+```
+
+---
+
+## `jwt-tool.py` - inspect, verify and attack JSON Web Tokens
+
+**What it does:** decodes a JWT's header and payload, flags the classic weaknesses
+(`alg:none`, a symmetric HS* secret you can brute), checks the `exp`/`nbf`/`iat` times,
+and either verifies a known secret or dictionary-cracks an HS256 one.
+
+**How it works:** it splits the three base64url parts and pretty-prints them. `--secret`
+recomputes the HMAC and compares it in constant time (`hmac.compare_digest`). `--wordlist`
+tries each line as the HS secret until the signature matches - the standard attack on a
+weak-key HS256 token. `--forge-none` rebuilds the token with `"alg":"none"` and an empty
+signature, to test whether a server wrongly accepts it.
+
+```bash
+python3 jwt-tool.py eyJhbGci...                         # decode + warnings
+python3 jwt-tool.py eyJhbGci... --wordlist rockyou.txt  # crack the HS256 secret
+python3 jwt-tool.py eyJhbGci... --forge-none            # build an alg:none token
 ```
 
 ---

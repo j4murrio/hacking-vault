@@ -16,12 +16,19 @@ console over the same tools.
 | [`osint/crtsh.py`](osint/crtsh.py) | OSINT | Python 3 | Passive subdomain enumeration from Certificate Transparency logs (crt.sh). |
 | [`osint/username-hunt.py`](osint/username-hunt.py) | OSINT | Python 3 | Finds where a username is registered across ~30 public sites. |
 | [`osint/footprint.py`](osint/footprint.py) | OSINT | Python 3 | Passive DNS (over HTTPS) + WHOIS registration footprint of a domain. |
+| [`osint/wayback.py`](osint/wayback.py) | OSINT | Python 3 | Archived URLs for a domain from the Wayback Machine (CDX). |
 | [`recon/dnsrecon.py`](recon/dnsrecon.py) | Recon | Python 3 | DNS records, zone-transfer (AXFR) attempt and subdomain brute force. |
 | [`recon/portscan.py`](recon/portscan.py) | Recon | Python 3 | Threaded TCP connect scanner for boxes without nmap. |
 | [`recon/webenum.py`](recon/webenum.py) | Recon | Python 3 | Quick single-host web recon: headers, cookies, methods, paths (detection only). |
+| [`recon/httpprobe.py`](recon/httpprobe.py) | Recon | Python 3 | Probe a host list for live HTTP/HTTPS: status, title, server. |
+| [`web/dirscan.py`](web/dirscan.py) | Web | Python 3 | Threaded directory/file discovery against a base URL. |
+| [`web/cors-check.py`](web/cors-check.py) | Web | Python 3 | Detects permissive / misconfigured CORS. |
 | [`crypto/magic-decode.py`](crypto/magic-decode.py) | CTF crypto | Python 3 | Recursively peels layered encodings until it reaches text or a flag. |
-| [`crypto/classic-cipher.py`](crypto/classic-cipher.py) | CTF crypto | Python 3 | Caesar/XOR/Vigenere/Atbash/railfence/frequency, with scoring. |
+| [`crypto/encode.py`](crypto/encode.py) | CTF crypto | Python 3 | Encodes text into base64/32/hex/url/rot13/binary; `all` shows every one. |
+| [`crypto/classic-cipher.py`](crypto/classic-cipher.py) | CTF crypto | Python 3 | Caesar/XOR/Vigenere/Atbash/railfence/frequency, with scoring; `all` runs every cipher. |
 | [`crypto/hashid.py`](crypto/hashid.py) | Credentials | Python 3 → `hashcat`/`john` | Identifies a hash and prints the matching crack command. |
+| [`crypto/jwt-tool.py`](crypto/jwt-tool.py) | CTF crypto / web | Python 3 | Decodes a JWT, flags `alg:none`, verifies or dictionary-cracks HS256. |
+| [`forensics/fileinspect.py`](forensics/fileinspect.py) | Forensics | Python 3 | Magic bytes, strings, entropy and embedded-file carving. |
 | [`shells/revshell.py`](shells/revshell.py) | Exploitation | Python 3 → `nc`/`socat` | Reverse-shell one-liners across interpreters, plus the listener. |
 
 > **Uses** = what the script runs on. All need only **Python 3** (standard library,
@@ -29,7 +36,8 @@ console over the same tools.
 > yourself, it is not required for the script to work.
 
 Per-category detail: [`osint/`](osint/README.md) · [`recon/`](recon/README.md) ·
-[`crypto/`](crypto/README.md) · [`shells/`](shells/README.md).
+[`web/`](web/README.md) · [`crypto/`](crypto/README.md) ·
+[`forensics/`](forensics/README.md) · [`shells/`](shells/README.md).
 
 ## Examples
 

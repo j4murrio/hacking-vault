@@ -58,3 +58,22 @@ downloads or exploits anything.
 python3 webenum.py http://10.10.10.10
 python3 webenum.py https://target.com -k --paths admin,backup,api/v1
 ```
+
+---
+
+## `httpprobe.py` - find the live web hosts in a list
+
+**What it does:** takes a pile of hosts (from subdomain enumeration, a scope file or
+stdin) and tells you which ones actually serve HTTP/HTTPS, with their status code, page
+title and server header - so you know where to point the rest of your tools.
+
+**How it works:** for each host it tries the chosen ports (default `80,443`) over both
+schemes in parallel, follows one redirect, and reports what answered. Hosts come from the
+command line, `--file`, or a pipe (`crtsh.py ... | httpprobe.py`). `--title` fetches a few
+KB to pull the `<title>`; otherwise it only reads headers.
+
+```bash
+python3 httpprobe.py example.com www.example.com --title
+python3 httpprobe.py --file subs.txt --ports 80,443,8080,8443
+python3 osint/crtsh.py example.com | python3 recon/httpprobe.py --title
+```

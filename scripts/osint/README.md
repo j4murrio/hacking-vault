@@ -57,3 +57,23 @@ server, parsing the fields that matter. Fully passive.
 python3 footprint.py example.com                 # DNS + WHOIS
 python3 footprint.py example.com --dns-only --resolver cloudflare
 ```
+
+---
+
+## `wayback.py` - archived URLs from the Wayback Machine
+
+**What it does:** lists the URLs the Internet Archive has ever captured for a domain -
+old endpoints, parameters, forgotten files and paths that no longer appear on the live
+site but still exist on the server.
+
+**How it works:** queries the Wayback Machine's **CDX** API for the domain and
+de-duplicates the snapshots. `--subdomains` widens it to `*.domain`, `--ext` keeps only
+chosen extensions (e.g. `php,bak,sql,env`), `--params` keeps only URLs that carry a query
+string (good hunting for IDOR/SQLi), and `--live` sends a `HEAD` to each and keeps the
+ones that still answer. Fully passive against the target - all traffic goes to the archive.
+
+```bash
+python3 wayback.py example.com                          # every archived URL
+python3 wayback.py example.com --ext php,bak,sql,env    # juicy files only
+python3 wayback.py example.com --params --live          # live URLs with parameters
+```

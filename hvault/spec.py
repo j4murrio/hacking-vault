@@ -84,6 +84,16 @@ def build_registry():
              Param("--whois-only", "WHOIS only", kind="flag"),
              Param("--resolver", "DoH resolver", default="google",
                    kind="choice", choices=("google", "cloudflare"))]),
+        ToolSpec(
+            "osint.wayback", "OSINT", "Wayback URLs",
+            "Archived URLs for a domain from the Wayback Machine (passive).",
+            f"{s}/osint/wayback.py",
+            [Param("domain", "Domain", required=True, help="apex domain, e.g. example.com"),
+             Param("--subdomains", "Include subdomains", kind="flag"),
+             Param("--ext", "Extensions", help="comma-separated, e.g. php,bak,sql"),
+             Param("--params", "Only URLs with params", kind="flag"),
+             Param("--live", "Keep reachable only", kind="flag"),
+             Param("--timeout", "Timeout (s)", default=30, kind="int")]),
         # ---- Recon (active) -------------------------------------------------
         ToolSpec(
             "recon.dnsrecon", "Recon", "DNS recon + AXFR",
@@ -110,6 +120,35 @@ def build_registry():
             [Param("url", "URL", required=True, help="http(s)://host[:port]/"),
              Param("--insecure", "Skip TLS verify", kind="flag"),
              Param("--paths", "Extra paths", help="comma-separated")]),
+        ToolSpec(
+            "recon.httpprobe", "Recon", "HTTP probe",
+            "Probe a host list for live HTTP/HTTPS: status, title, server.",
+            f"{s}/recon/httpprobe.py",
+            [Param("hosts", "Hosts", help="space-separated (or use --file)"),
+             Param("--file", "Host file", help="one host per line"),
+             Param("--ports", "Ports", default="80,443"),
+             Param("--title", "Fetch title", kind="flag"),
+             Param("--insecure", "Skip TLS verify", kind="flag"),
+             Param("--timeout", "Timeout (s)", default=8, kind="int")]),
+        # ---- Web application ------------------------------------------------
+        ToolSpec(
+            "web.dirscan", "Web", "Content discovery",
+            "Threaded directory/file discovery against a base URL (built-in or wordlist).",
+            f"{s}/web/dirscan.py",
+            [Param("url", "Base URL", required=True, help="http(s)://host[:port]/"),
+             Param("--wordlist", "Wordlist", help="path (default: built-in list)"),
+             Param("--ext", "Extensions", help="comma-separated, e.g. php,txt,bak"),
+             Param("--status", "Status codes", default="200,204,301,302,307,401,403"),
+             Param("--insecure", "Skip TLS verify", kind="flag"),
+             Param("--timeout", "Timeout (s)", default=8, kind="int")]),
+        ToolSpec(
+            "web.cors", "Web", "CORS check",
+            "Detect permissive / misconfigured CORS (reflected origin, null, credentials).",
+            f"{s}/web/cors-check.py",
+            [Param("url", "URL", required=True, help="endpoint, e.g. https://api.host/"),
+             Param("--origin", "Attacker origin", help="default https://evil.example"),
+             Param("--insecure", "Skip TLS verify", kind="flag"),
+             Param("--timeout", "Timeout (s)", default=10, kind="int")]),
         # ---- Vulnerability scan (flagship) ----------------------------------
         ToolSpec(
             "scan.vulnscan", "Scan", "vulnscan (all-in-one)",
@@ -134,11 +173,20 @@ def build_registry():
              Param("--all", "All codecs (1 layer)", kind="flag"),
              Param("--flag", "Flag regex")]),
         ToolSpec(
+            "crypto.encode", "Crypto", "Encoder",
+            "Encode text into base64/32/hex/url/rot13/binary; 'all' shows every one.",
+            f"{s}/crypto/encode.py",
+            [Param("cmd", "Codec", default="all", kind="choice",
+                   choices=("all", "base64", "base64url", "base32", "hex", "url",
+                            "rot13", "binary", "decimal", "html", "reverse", "gzip64")),
+             Param("text", "Text", kind="text")]),
+        ToolSpec(
             "crypto.cipher", "Crypto", "Classic ciphers",
-            "Caesar/XOR/Vigenere/Atbash/railfence/frequency with scoring.",
+            "Caesar/XOR/Vigenere/Atbash/railfence/frequency with scoring; 'all' runs them all.",
             f"{s}/crypto/classic-cipher.py",
-            [Param("cmd", "Cipher", required=True, kind="choice",
-                   choices=("caesar", "xor", "vigenere", "atbash", "railfence", "freq")),
+            [Param("cmd", "Cipher", default="all", kind="choice",
+                   choices=("all", "caesar", "xor", "vigenere", "atbash",
+                            "railfence", "freq")),
              Param("text", "Text", kind="text"),
              Param("--brute", "Brute force", kind="flag"),
              Param("--hex", "Input is hex", kind="flag"),
@@ -149,6 +197,23 @@ def build_registry():
             f"{s}/crypto/hashid.py",
             [Param("hash", "Hash", required=True),
              Param("--wordlist", "Wordlist", default="/usr/share/wordlists/rockyou.txt")]),
+        ToolSpec(
+            "crypto.jwt", "Crypto", "JWT tool",
+            "Decode a JWT, flag alg:none, verify or dictionary-crack the HS256 secret.",
+            f"{s}/crypto/jwt-tool.py",
+            [Param("token", "Token", required=True, kind="text"),
+             Param("--secret", "Verify secret", help="verify an HS* signature"),
+             Param("--wordlist", "Crack wordlist", help="dictionary-crack the secret"),
+             Param("--forge-none", "Forge alg:none", kind="flag")]),
+        # ---- Forensics / CTF ------------------------------------------------
+        ToolSpec(
+            "forensics.fileinspect", "Forensics", "File inspector",
+            "Magic bytes, strings, entropy and embedded-file carving for a file.",
+            f"{s}/forensics/fileinspect.py",
+            [Param("file", "File path", required=True),
+             Param("--strings", "Dump strings", kind="flag"),
+             Param("--min", "Min string len", default=4, kind="int"),
+             Param("--flag", "Flag regex")]),
         # ---- Exploitation ---------------------------------------------------
         ToolSpec(
             "shells.revshell", "Shells", "Reverse shell generator",

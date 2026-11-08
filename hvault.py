@@ -11,6 +11,9 @@ registry (hvault/spec.py). Standard library only.
     python3 hvault.py list            # list every tool and its id
     python3 hvault.py run <id> [args] # run one tool directly, e.g.
                                       #   run osint.crtsh example.com --live
+    python3 hvault.py report <target> # sweep whole categories into one report
+                                      #   report example.com --only osint
+                                      #   report example.com --active
 
 Authorized / educational use only.
 """
@@ -20,7 +23,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from hvault import menu, web
+from hvault import menu, report, web
 from hvault.spec import build_registry
 
 ROOT = Path(__file__).resolve().parent
@@ -45,6 +48,16 @@ def cmd_run(registry, args):
     return subprocess.call([sys.executable, str(path)] + args.toolargs)
 
 
+def cmd_report(registry, args):
+    try:
+        out = report.generate(registry, args.target, active=args.active,
+                              timeout=args.timeout, only=args.only)
+    except ValueError as e:
+        sys.exit(f"[-] {e}")
+    print(f"\n[+] Report written to {out}")
+    return 0
+
+
 def main():
     p = argparse.ArgumentParser(
         description="Unified launcher for the hacking-vault toolkit.",
@@ -64,6 +77,15 @@ def main():
     r.add_argument("id", help="tool id, e.g. osint.crtsh")
     r.add_argument("toolargs", nargs=argparse.REMAINDER, help="arguments passed to the tool")
 
+    rep = sub.add_parser("report", help="chain whole categories of tools into one report")
+    rep.add_argument("target", help="domain or IP")
+    rep.add_argument("--active", action="store_true",
+                     help="also run active recon (ports, web)")
+    rep.add_argument("--only", metavar="CATEGORY",
+                     help="limit to one category, e.g. osint, recon, web")
+    rep.add_argument("--timeout", type=int, default=180,
+                     help="per-tool timeout s (default 180)")
+
     args = p.parse_args()
     registry = build_registry()
 
@@ -71,6 +93,8 @@ def main():
         return cmd_list(registry, args)
     if args.mode == "run":
         return cmd_run(registry, args)
+    if args.mode == "report":
+        return cmd_report(registry, args)
     if args.mode == "web":
         return web.serve(registry, port=args.port,
                          open_browser=not args.no_browser, timeout=args.timeout)

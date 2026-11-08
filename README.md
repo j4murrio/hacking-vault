@@ -2,137 +2,181 @@
 
 # 🔐 Hacking Vault
 
-**Mi arsenal personal de pentesting y seguridad ofensiva**
+**My personal pentesting and offensive-security arsenal**
 
-OSINT · Recon · Scan · Crypto · Shells — con menú de terminal y consola web
+OSINT · Recon · Web · Scan · Crypto · Forensics · Shells — with a terminal menu and a web console
 
 </div>
 
 ---
 
-## ⚠️ Solo uso autorizado
+## ⚠️ Authorized use only
 
-> Todo esto es para **fines educativos** y para sistemas en los que tengas
-> **permiso explícito** (labs, HTB/TryHackMe, CTFs, engagements con contrato).
-> El mal uso es ilegal. El autor no se responsabiliza del uso indebido.
+> Everything here is for **educational purposes** and for systems where you have
+> **explicit permission** (labs, HTB/TryHackMe, CTFs, contracted engagements).
+> Misuse is illegal. The author takes no responsibility for improper use.
 
 ---
 
-## 📁 Estructura
+## 📁 Layout
 
-Solo herramientas. Todo es **Python stdlib** (sin `pip`), un archivo por herramienta
-y autodocumentado (`-h`).
+Tools only. Everything is **Python stdlib** (no `pip`), one file per tool and
+self-documented (`-h`).
 
 ```
 hacking-vault/
 │
-├── 🚀 hvault.py      Lanzador unificado: menú de terminal + consola web
-├── 🧩 hvault/        Núcleo del lanzador (registro declarativo, menú, web, runner)
-├── 🐍 scripts/       Herramientas por categoría
-│   ├── osint/        OSINT pasivo: crt.sh, hunt de usuario, footprint DNS/WHOIS
-│   ├── recon/        Recon activo: puertos sin nmap, DNS/AXFR, web
-│   ├── crypto/       Cripto/CTF: magic-decode, cifras clásicas, hashid
+├── 🚀 hvault.py      Unified launcher: terminal menu + web console + report
+├── 🧩 hvault/        Launcher core (declarative registry, menu, web, runner, report)
+├── 🐍 scripts/       Tools by category
+│   ├── osint/        Passive OSINT: crt.sh, username hunt, DNS/WHOIS, Wayback
+│   ├── recon/        Active recon: ports without nmap, DNS/AXFR, web, HTTP probe
+│   ├── web/          Web app testing: content discovery, CORS misconfig
+│   ├── crypto/       Crypto/CTF: magic-decode, encode, classic ciphers, hashid, JWT
+│   ├── forensics/    Forensics/CTF: file inspection, strings, carving, entropy
 │   └── shells/       Reverse shells + listener
 └── 🧰 tools/
-    └── vulnscan/     Auditor todo-en-uno que encadena tus herramientas
+    └── vulnscan/     All-in-one auditor that chains your tools
 ```
 
 ---
 
-## 🚀 Lanzador unificado
+## 🚀 Unified launcher
 
-Una sola puerta de entrada a todas las herramientas, desde un menú de terminal o una
-consola web local. Sin dependencias.
+A single front door to every tool, from a terminal menu or a local web console.
+No dependencies.
 
 ```bash
-python3 hvault.py              # menú interactivo en terminal (por defecto)
-python3 hvault.py web          # consola web local, se abre en el navegador
-python3 hvault.py list         # lista todas las herramientas y su id
-python3 hvault.py run osint.crtsh example.com --live   # ejecuta una directamente
+python3 hvault.py              # interactive terminal menu (default)
+python3 hvault.py web          # local web console, opens in the browser
+python3 hvault.py list         # list every tool and its id
+python3 hvault.py run osint.crtsh example.com --live   # run one directly
+python3 hvault.py report example.com                   # chain passive tools into one report
 ```
 
-La consola web escucha **solo en loopback** y protege cada petición con una clave
-aleatoria que va en la URL: nada fuera de tu máquina puede usarla. Cada herramienta
-sigue siendo usable por su cuenta (`python3 scripts/osint/crtsh.py ...`); el lanzador
-es una capa de comodidad por encima. Detalle: [`hvault/README.md`](hvault/README.md).
+The web console listens on **loopback only** and guards every request with a
+random key carried in the URL, so nothing off your machine can reach it. Each
+tool stays usable on its own (`python3 scripts/osint/crtsh.py ...`); the launcher
+is a convenience layer on top. Details: [`hvault/README.md`](hvault/README.md).
 
 ---
 
-## ⭐ Destacado: `vulnscan`
+## 🧾 One target, one report
 
-Auditor de seguridad **todo-en-uno por consola** que encadena tus herramientas
-(nmap, httpx, nuclei, ffuf, sqlmap, subfinder, SMB, hydra...) en un solo flujo.
+`report` is the global mode: point it at a domain or host and it sweeps every
+applicable tool - chosen from the registry, so a new OSINT script joins the sweep
+by itself - and writes a single Markdown report under `reports/` (git-ignored).
+OSINT runs by default; `--active` adds Recon and Web. Use `--only <category>` to
+gather one whole area at once (all of OSINT, all of Recon...). Individually you
+reach for one tool; globally you get the whole picture with one command.
 
 ```bash
-python3 tools/vulnscan/vulnscan.py <objetivo> --full
+python3 hvault.py report example.com            # passive profile (safe by default)
+python3 hvault.py report example.com --only osint   # run all of OSINT at once
+python3 hvault.py report 10.10.10.10 --active   # add light active recon (ports, web)
+```
+
+---
+
+## ⭐ Flagship: `vulnscan`
+
+An **all-in-one console security auditor** that chains your tools (nmap, httpx,
+nuclei, ffuf, sqlmap, subfinder, SMB, hydra...) into a single flow.
+
+```bash
+python3 tools/vulnscan/vulnscan.py <target> --full
 ```
 
 | | |
 |---|---|
-| 🌐 **Red** | puertos y servicios con nmap |
-| 🕸️ **Web** | fingerprint, cabeceras, TLS, XSS/SQLi, fuzzing |
-| 🪟 **SMB/AD** | sesiones nulas, recursos, usuarios |
-| 🔎 **DNS** | registros y transferencia de zona |
-| 📄 **Reporte** | hallazgos por severidad + vectores de ataque |
+| 🌐 **Network** | ports and services with nmap |
+| 🕸️ **Web** | fingerprint, headers, TLS, XSS/SQLi, fuzzing |
+| 🪟 **SMB/AD** | null sessions, shares, users |
+| 🔎 **DNS** | records and zone transfer |
+| 📄 **Report** | findings by severity + attack vectors |
 
-➡️ Guía completa: [`tools/vulnscan/README.md`](tools/vulnscan/README.md)
+➡️ Full guide: [`tools/vulnscan/README.md`](tools/vulnscan/README.md)
 
 ---
 
-## 🧰 Herramientas incluidas
+## 🧰 Included tools
 
-| Herramienta | Categoría | Para qué |
-|-------------|-----------|----------|
-| `scripts/osint/crtsh.py` | OSINT | Subdominios pasivos desde Certificate Transparency (crt.sh) |
-| `scripts/osint/username-hunt.py` | OSINT | Dónde está registrado un usuario en ~30 sitios públicos |
-| `scripts/osint/footprint.py` | OSINT | Footprint pasivo: DNS (sobre HTTPS) + WHOIS |
-| `scripts/recon/dnsrecon.py` | Recon | Registros DNS, intento de AXFR y brute de subdominios |
-| `scripts/recon/portscan.py` | Recon | Escáner TCP con hilos para cajas sin nmap |
-| `scripts/recon/webenum.py` | Recon | Recon web rápido (cabeceras, cookies, métodos, rutas) |
-| `scripts/crypto/magic-decode.py` | Cripto/CTF | Pela capas de codificación hasta dar con texto o flag |
-| `scripts/crypto/classic-cipher.py` | Cripto/CTF | César/XOR/Vigenère/Atbash/railfence/frecuencias con scoring |
-| `scripts/crypto/hashid.py` | Credenciales | Identifica un hash y da el comando `hashcat`/`john` |
-| `scripts/shells/revshell.py` | Explotación | Reverse shells por varios intérpretes + listener |
-| `tools/vulnscan/vulnscan.py` | Scan | Auditor todo-en-uno (red, web, SMB/AD, nuclei, fuzzing, reporte) |
+| Tool | Category | What it does |
+|------|----------|--------------|
+| `scripts/osint/crtsh.py` | OSINT | Passive subdomains from Certificate Transparency (crt.sh) |
+| `scripts/osint/username-hunt.py` | OSINT | Where a username is registered across ~30 public sites |
+| `scripts/osint/footprint.py` | OSINT | Passive footprint: DNS (over HTTPS) + WHOIS |
+| `scripts/osint/wayback.py` | OSINT | Archived URLs for a domain from the Wayback Machine (CDX) |
+| `scripts/recon/dnsrecon.py` | Recon | DNS records, AXFR attempt and subdomain brute force |
+| `scripts/recon/portscan.py` | Recon | Threaded TCP scanner for boxes without nmap |
+| `scripts/recon/webenum.py` | Recon | Fast web recon (headers, cookies, methods, paths) |
+| `scripts/recon/httpprobe.py` | Recon | Probe a host list for live HTTP(S): status, title, server |
+| `scripts/web/dirscan.py` | Web | Wordlist content discovery (dirs/files), threaded |
+| `scripts/web/cors-check.py` | Web | Detect permissive / misconfigured CORS |
+| `scripts/crypto/magic-decode.py` | Crypto/CTF | Peel layered encodings until text or a flag drops out |
+| `scripts/crypto/encode.py` | Crypto/CTF | The inverse: encode into base64/32/hex/url/rot13/binary (`all`) |
+| `scripts/crypto/classic-cipher.py` | Crypto/CTF | Caesar/XOR/Vigenere/Atbash/railfence/frequency with scoring (`all`) |
+| `scripts/crypto/jwt-tool.py` | Crypto/Web | Decode a JWT, flag `alg:none`, verify or dictionary-crack HS256 |
+| `scripts/crypto/hashid.py` | Credentials | Identify a hash and print the `hashcat`/`john` command |
+| `scripts/forensics/fileinspect.py` | Forensics | Magic bytes, strings, entropy and embedded-file carving |
+| `scripts/shells/revshell.py` | Exploitation | Reverse shells across interpreters + listener |
+| `tools/vulnscan/vulnscan.py` | Scan | All-in-one auditor (network, web, SMB/AD, nuclei, fuzzing, report) |
 
-➡️ Detalle por categoría: [`scripts/README.md`](scripts/README.md) ·
+➡️ Per-category detail: [`scripts/README.md`](scripts/README.md) ·
 [`osint/`](scripts/osint/README.md) · [`recon/`](scripts/recon/README.md) ·
-[`crypto/`](scripts/crypto/README.md) · [`shells/`](scripts/shells/README.md)
+[`web/`](scripts/web/README.md) · [`crypto/`](scripts/crypto/README.md) ·
+[`forensics/`](scripts/forensics/README.md) · [`shells/`](scripts/shells/README.md)
 
 ---
 
-## 🎯 ¿Qué cubre cada categoría?
+## 🎯 What each category covers
 
-| Categoría | Qué hay aquí |
-|-----------|--------------|
-| 🕵️ **OSINT** | reconocimiento pasivo: subdominios, usuarios, DNS/WHOIS |
-| 🔍 **Recon** | escaneo de puertos, DNS/AXFR, recon web activo |
-| 🛡️ **Scan** | auditoría encadenada con `vulnscan` |
-| 🧩 **Cripto/CTF** | decodificación, cifras clásicas, identificación de hashes |
-| 🐚 **Shells** | reverse shells y listeners |
+| Category | What lives here |
+|----------|-----------------|
+| 🕵️ **OSINT** | passive recon: subdomains, usernames, DNS/WHOIS, archived URLs |
+| 🔍 **Recon** | port scanning, DNS/AXFR, active web recon, HTTP probing |
+| 🕸️ **Web** | content discovery, CORS and web-app misconfig checks |
+| 🛡️ **Scan** | chained auditing with `vulnscan` |
+| 🧩 **Crypto/CTF** | decoding/encoding, classic ciphers, hash and JWT work |
+| 🔬 **Forensics** | file typing, strings, entropy, embedded-file carving |
+| 🐚 **Shells** | reverse shells and listeners |
 
 ---
 
-## 🚀 Uso rápido
+## 🧩 Tools that run every function at once
+
+The multi-function tools take an `all` mode (also the default when you name no
+sub-function), so you can throw input at them and let scoring surface the answer:
 
 ```bash
-# Clonar
-git clone <repo> hacking-vault && cd hacking-vault
-
-# (archpwm) activar el entorno Python si lo usas para las herramientas de terceros
-wsvenva
-
-# Menú para todo, o una herramienta directa
-python3 hvault.py
-python3 tools/vulnscan/vulnscan.py <objetivo> --full
+python3 scripts/crypto/classic-cipher.py "iodj{...}"   # tries every cipher, ranks hits
+python3 scripts/crypto/encode.py "secret"              # shows every encoding at once
+python3 scripts/crypto/magic-decode.py <blob>          # peels every layer automatically
 ```
-
-> 💡 Los resultados de los escaneos se guardan en carpetas locales que el
-> `.gitignore` **excluye automáticamente** del repositorio.
 
 ---
 
-## 🔗 Recursos útiles
+## 🚀 Quick start
+
+```bash
+# Clone
+git clone <repo> hacking-vault && cd hacking-vault
+
+# (pwnix) activate the Python environment if you use it for the third-party tools
+wsvenva
+
+# Menu for everything, a tool directly, or one report for a target
+python3 hvault.py
+python3 hvault.py report <target>
+python3 tools/vulnscan/vulnscan.py <target> --full
+```
+
+> 💡 Scan results and reports are written to local folders that `.gitignore`
+> **excludes automatically** from the repository.
+
+---
+
+## 🔗 Useful resources
 
 - 📚 [HackTricks](https://book.hacktricks.xyz/)
 - 🐧 [GTFOBins](https://gtfobins.github.io/)
@@ -143,8 +187,8 @@ python3 tools/vulnscan/vulnscan.py <objetivo> --full
 
 <div align="center">
 
-📜 Licencia MIT · con fines educativos
+📜 MIT License · for educational purposes
 
-**Hackea con ética, siempre con permiso.** 🎯
+**Hack ethically, always with permission.** 🎯
 
 </div>

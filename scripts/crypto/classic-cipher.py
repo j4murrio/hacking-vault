@@ -154,8 +154,7 @@ def cmd_vigenere(args):
     print("".join(out))
 
 
-def cmd_atbash(args):
-    text = get_data(args).decode("utf-8", "backslashreplace")
+def atbash(text):
     out = []
     for ch in text:
         if "a" <= ch <= "z":
@@ -164,7 +163,11 @@ def cmd_atbash(args):
             out.append(chr(155 - ord(ch)))   # 155 = ord('A') + ord('Z')
         else:
             out.append(ch)
-    print("".join(out))
+    return "".join(out)
+
+
+def cmd_atbash(args):
+    print(atbash(get_data(args).decode("utf-8", "backslashreplace")))
 
 
 def railfence_decrypt(text, rails):
@@ -198,6 +201,29 @@ def cmd_railfence(args):
     print(railfence_decrypt(text, args.rails))
 
 
+def cmd_all(args):
+    """Run every keyless cipher against the input and rank the results.
+
+    Caesar (26 shifts), Atbash, single-byte XOR (256 keys) and rail fence
+    (2..10 rails) all decrypt without a key, so one pass plus plaintext scoring
+    usually floats the real answer to the top. Vigenere and keyed XOR need a key
+    and are skipped here - reach for their own subcommands.
+    """
+    data = get_data(args)
+    text = data.decode("utf-8", "backslashreplace")
+    cands = [(f"caesar {k:>2}", caesar_shift(text, k)) for k in range(26)]
+    cands.append(("atbash", atbash(text)))
+    cands += [(f"xor 0x{k:02x}", xor_bytes(data, bytes([k])).decode("utf-8", "backslashreplace"))
+              for k in range(256)]
+    cands += [(f"railfence {r}", railfence_decrypt(text, r)) for r in range(2, 11)]
+
+    ranked = sorted(cands,
+                    key=lambda c: plaintext_score(c[1].encode("utf-8", "replace")),
+                    reverse=True)
+    for label, out in (ranked if args.all else ranked[:args.top]):
+        print(f"[{label:>12}] {show(out.encode('utf-8', 'replace'))}")
+
+
 def cmd_freq(args):
     data = get_data(args)
     letters = [chr(b).lower() for b in data if chr(b).isalpha()]
@@ -213,11 +239,18 @@ def main():
     p = argparse.ArgumentParser(
         description="Classic-cipher toolkit for CTF crypto.",
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    sub = p.add_subparsers(dest="cmd", required=True)
+    sub = p.add_subparsers(dest="cmd")
 
     def add_input(sp):
         sp.add_argument("text", nargs="?", help="input text ('-'/omit for stdin)")
         sp.add_argument("-f", "--file", help="read input from a file")
+
+    al = sub.add_parser("all", help="run every keyless cipher and rank (default)")
+    add_input(al)
+    al.add_argument("--hex", action="store_true", help="input is a hex string")
+    al.add_argument("--top", type=int, default=12, help="results to show (default 12)")
+    al.add_argument("--all", action="store_true", help="show every candidate")
+    al.set_defaults(func=cmd_all)
 
     c = sub.add_parser("caesar", help="Caesar/ROT brute force or fixed shift")
     add_input(c)
@@ -253,7 +286,17 @@ def main():
     add_input(fq)
     fq.set_defaults(func=cmd_freq)
 
-    args = p.parse_args()
+    # No subcommand, or a first token that is not one, means "all": both
+    # `classic-cipher.py "iodj{...}"` and a bare `classic-cipher.py` (stdin) run
+    # every keyless cipher and rank the output.
+    argv = sys.argv[1:]
+    subcommands = {"all", "caesar", "xor", "vigenere", "atbash", "railfence", "freq"}
+    if argv and argv[0] in ("-h", "--help"):
+        pass
+    elif not argv or argv[0] not in subcommands:
+        argv = ["all"] + argv
+
+    args = p.parse_args(argv)
     args.func(args)
 
 

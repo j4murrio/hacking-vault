@@ -8,6 +8,35 @@ python3 hvault.py              # interactive terminal menu (default)
 python3 hvault.py web          # local web console, opens in your browser
 python3 hvault.py list         # list every tool and its id
 python3 hvault.py run osint.crtsh example.com --live   # run one tool directly
+python3 hvault.py report example.com                   # chain passive tools into one report
+```
+
+## `report` - sweep whole categories into one report
+
+`report` is the global counterpart to running a single tool. Point it at a domain or an
+IP and it runs every applicable tool through the same `runner`, then writes everything to
+`reports/<target>_<stamp>.md` (the `reports/` folder is git-ignored, so nothing a scan
+collects is committed).
+
+The set of tools is **derived from the registry, not hard-coded**: each tool joins the
+sweep when the target fits its primary input (a domain tool needs a domain; port/HTTP/web
+tools take a domain or an IP). Drop a new OSINT script into `spec.py` and it is picked up
+automatically - nothing else to wire.
+
+- **OSINT** (passive) always runs. **Recon** and **Web** (active, they touch the host) run
+  only with `--active`, or when `--only` names their category.
+- `--only CATEGORY` limits the sweep to one area - this is the "run all of OSINT at once"
+  button (`--only recon`, `--only web`, ...). An active category named with `--only` runs
+  without needing `--active`.
+- An **IP** has no passive sources, so a plain IP report needs `--active` (or `--only`).
+- The heavy `scan.vulnscan` orchestrator is left out of the sweep; run it on its own.
+
+```bash
+python3 hvault.py report example.com                   # all OSINT (passive)
+python3 hvault.py report example.com --only osint      # same, stated explicitly
+python3 hvault.py report example.com --active          # OSINT + Recon + Web
+python3 hvault.py report example.com --only recon      # just the recon tools
+python3 hvault.py report 10.10.10.10 --active          # IP needs --active
 ```
 
 ## How it works
