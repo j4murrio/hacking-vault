@@ -25,7 +25,8 @@ def run(spec, values, timeout=None):
     try:
         proc = subprocess.run(
             cmd, capture_output=True, text=True, timeout=timeout,
-            cwd=str(ROOT), encoding="utf-8", errors="replace")
+            cwd=str(ROOT), encoding="utf-8", errors="replace",
+            stdin=subprocess.DEVNULL)
     except subprocess.TimeoutExpired as e:
         partial = (e.stdout or "") + (e.stderr or "")
         return 124, partial + f"\n[-] Timed out after {timeout}s"

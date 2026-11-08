@@ -68,7 +68,7 @@ def main():
     args = p.parse_args()
 
     if not args.url.lower().startswith(("http://", "https://")):
-        sys.exit("[-] URL must start with http:// or https://")
+        args.url = "http://" + args.url
 
     host, checks = analyze(args.url, args.origin)
     findings = []

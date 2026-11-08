@@ -45,6 +45,19 @@ def parse_ports(spec):
     return sorted(p for p in ports if 0 < p < 65536)
 
 
+def clean_host(target):
+    """Pull a bare hostname/IP out of something pasted as a URL or host:port."""
+    host = target.strip()
+    if "://" in host:
+        host = host.split("://", 1)[1]
+    host = host.split("/", 1)[0]
+    if host.count(":") == 1:  # host:port, but leave IPv6 literals alone
+        name, port = host.split(":")
+        if port.isdigit():
+            host = name
+    return host
+
+
 def service(port):
     try:
         return socket.getservbyport(port)
@@ -78,12 +91,13 @@ def main():
     p.add_argument("--banner", action="store_true", help="grab a short service banner")
     args = p.parse_args()
 
+    host = clean_host(args.target)
     try:
-        ip = socket.gethostbyname(args.target)
+        ip = socket.gethostbyname(host)
     except socket.gaierror:
-        sys.exit(f"[-] Cannot resolve {args.target}")
+        sys.exit(f"[-] Cannot resolve {host}")
     ports = list(parse_ports(args.ports))
-    print(f"[*] Scanning {args.target} ({ip}) - {len(ports)} ports, "
+    print(f"[*] Scanning {host} ({ip}) - {len(ports)} ports, "
           f"{args.threads} threads")
 
     open_ports = []

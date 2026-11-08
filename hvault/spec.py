@@ -198,6 +198,15 @@ def build_registry():
             [Param("hash", "Hash", required=True),
              Param("--wordlist", "Wordlist", default="/usr/share/wordlists/rockyou.txt")]),
         ToolSpec(
+            "crypto.hashcrack", "Crypto", "Hash cracker",
+            "Dictionary attack against raw hashes (MD5/SHA1/SHA2/SHA3, NTLM where "
+            "available); auto-detects the scheme by digest length.",
+            f"{s}/crypto/hashcrack.py",
+            [Param("hash", "Hash"),
+             Param("--file", "Hash file", help="file with one hash per line"),
+             Param("--wordlist", "Wordlist", default="/usr/share/wordlists/rockyou.txt"),
+             Param("--algo", "Force scheme", help="e.g. md5, sha256, ntlm")]),
+        ToolSpec(
             "crypto.jwt", "Crypto", "JWT tool",
             "Decode a JWT, flag alg:none, verify or dictionary-crack the HS256 secret.",
             f"{s}/crypto/jwt-tool.py",

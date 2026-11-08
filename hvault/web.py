@@ -20,105 +20,228 @@ PAGE = r"""<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>hacking-vault</title>
 <style>
-:root{--bg:#0d1117;--panel:#161b22;--border:#30363d;--fg:#c9d1d9;--mut:#8b949e;
---acc:#2f81f7;--ok:#3fb950;--warn:#d29922}
-*{box-sizing:border-box}body{margin:0;font:14px/1.5 ui-monospace,SFMono-Regular,
-Menlo,Consolas,monospace;background:var(--bg);color:var(--fg)}
-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;
-align-items:baseline;gap:12px}header h1{margin:0;font-size:18px}
-header span{color:var(--mut);font-size:12px}
-.wrap{display:flex;min-height:calc(100vh - 52px)}
-aside{width:260px;border-right:1px solid var(--border);padding:12px;overflow:auto}
-aside h3{color:var(--mut);font-size:11px;text-transform:uppercase;margin:14px 0 6px}
-.tool{padding:7px 9px;border-radius:6px;cursor:pointer;margin-bottom:2px}
-.tool:hover{background:var(--panel)}.tool.active{background:#1f6feb33;
-outline:1px solid var(--acc)}.tool b{display:block}.tool small{color:var(--mut)}
-main{flex:1;padding:20px;overflow:auto}
-.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;
-padding:16px;margin-bottom:16px}
-label{display:block;margin:10px 0 3px;color:var(--mut)}
-input[type=text],select{width:100%;padding:8px;background:var(--bg);
-border:1px solid var(--border);border-radius:6px;color:var(--fg);font:inherit}
-textarea{width:100%;min-height:70px;padding:8px;background:var(--bg);
-border:1px solid var(--border);border-radius:6px;color:var(--fg);font:inherit}
-.chk{display:flex;align-items:center;gap:8px;margin:8px 0}
-.chk input{width:16px;height:16px}
-button{background:var(--acc);color:#fff;border:0;padding:10px 18px;border-radius:6px;
-font:inherit;cursor:pointer;margin-top:12px}button:disabled{opacity:.5;cursor:wait}
-.cmd{color:var(--mut);margin:10px 0;word-break:break-all}
-pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;
-white-space:pre-wrap;word-break:break-word;max-height:55vh;overflow:auto;margin:0}
+:root{--bg:#05080a;--panel:#0b1016;--panel2:#0e141b;--border:#1b2a22;
+--fg:#c8f7d8;--mut:#5f7d6b;--acc:#2ee66b;--acc2:#19c2ff;--ok:#2ee66b;
+--warn:#f5c451;--err:#ff5f56}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;height:100vh;overflow:hidden;display:flex;flex-direction:column;
+font:14px/1.55 "JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+background:
+  radial-gradient(1200px 600px at 80% -10%,#0c1f16 0%,transparent 60%),
+  var(--bg);
+color:var(--fg)}
+::selection{background:var(--acc);color:#02130a}
+/* scrollbars */
+*{scrollbar-width:thin;scrollbar-color:#1f3a2a transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#1f3a2a;border-radius:6px;border:2px solid transparent;
+background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:#2e5a40;background-clip:content-box}
+
+header{flex:0 0 auto;display:flex;align-items:center;gap:14px;
+padding:12px 20px;border-bottom:1px solid var(--border);
+background:linear-gradient(180deg,#0a130d,#060a07)}
+.dots{display:flex;gap:7px}.dots i{width:11px;height:11px;border-radius:50%;display:block}
+.dots i:nth-child(1){background:var(--err)}.dots i:nth-child(2){background:var(--warn)}
+.dots i:nth-child(3){background:var(--ok)}
+header h1{margin:0;font-size:15px;color:var(--acc);letter-spacing:.5px;
+text-shadow:0 0 10px #2ee66b66;font-weight:700}
+header h1 .host{color:var(--fg)}header h1 .path{color:var(--acc2)}
+.cursor{display:inline-block;width:8px;height:15px;background:var(--acc);
+margin-left:2px;vertical-align:-2px;animation:blink 1.1s steps(1) infinite;
+box-shadow:0 0 8px #2ee66b}
+@keyframes blink{50%{opacity:0}}
+header .meta{margin-left:auto;color:var(--mut);font-size:12px;text-align:right}
+header .meta b{color:var(--acc)}
+
+.wrap{flex:1 1 auto;display:flex;min-height:0}
+aside{flex:0 0 288px;display:flex;flex-direction:column;min-height:0;
+border-right:1px solid var(--border);background:linear-gradient(180deg,#070c09,#050807)}
+.search{flex:0 0 auto;padding:12px;border-bottom:1px solid var(--border)}
+.search input{width:100%;padding:9px 11px 9px 30px;background:var(--panel);
+border:1px solid var(--border);border-radius:7px;color:var(--fg);font:inherit;
+background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%235f7d6b' stroke-width='2' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+background-repeat:no-repeat;background-position:10px center}
+.search input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 2px #2ee66b22}
+.list{flex:1 1 auto;overflow-y:auto;min-height:0;padding:8px 10px 20px}
+.cat{margin-top:14px}.cat:first-child{margin-top:4px}
+.cat>h3{position:sticky;top:0;z-index:1;margin:0 0 6px;padding:5px 4px;
+color:var(--acc);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+background:linear-gradient(180deg,#070c09,#070c09ee);display:flex;gap:8px;align-items:center}
+.cat>h3::before{content:">";color:var(--mut)}
+.cat>h3 .n{margin-left:auto;color:var(--mut);letter-spacing:0}
+.tool{padding:8px 10px;border-radius:7px;cursor:pointer;margin-bottom:3px;
+border:1px solid transparent;transition:background .08s,border-color .08s}
+.tool:hover{background:var(--panel)}
+.tool.active{background:#0f2417;border-color:var(--acc);
+box-shadow:inset 2px 0 0 var(--acc),0 0 14px #2ee66b22}
+.tool b{display:block;color:var(--fg);font-weight:600}
+.tool.active b{color:var(--acc)}
+.tool small{color:var(--mut);display:block;white-space:nowrap;overflow:hidden;
+text-overflow:ellipsis}
+.empty-hint{color:var(--mut);padding:16px 8px;font-size:12px;display:none}
+
+main{flex:1 1 auto;overflow-y:auto;min-height:0;min-width:0;padding:22px}
+.welcome{color:var(--mut);max-width:560px}
+.welcome pre{background:none;border:0;color:var(--acc);text-shadow:0 0 8px #2ee66b44;
+padding:0;margin:0 0 14px;font-size:12px;line-height:1.3}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+padding:18px;margin-bottom:16px;box-shadow:0 1px 0 #00000040}
+.card h2{margin:0 0 4px;font-size:16px;color:var(--acc);text-shadow:0 0 8px #2ee66b33}
+label{display:block;margin:12px 0 4px;color:var(--mut);font-size:12px}
+input[type=text],select,textarea{width:100%;padding:9px 11px;background:#04070a;
+border:1px solid var(--border);border-radius:7px;color:var(--fg);font:inherit}
+input[type=text]:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);
+box-shadow:0 0 0 2px #2ee66b22}
+textarea{min-height:76px;resize:vertical}
+.chk{display:flex;align-items:center;gap:9px;margin:10px 0}
+.chk input{width:16px;height:16px;accent-color:var(--acc)}
+.chk label{margin:0}
+button.run{background:var(--acc);color:#02130a;border:0;padding:10px 22px;
+border-radius:7px;font:inherit;font-weight:700;cursor:pointer;margin-top:16px;
+letter-spacing:.3px;box-shadow:0 0 14px #2ee66b55}
+button.run:hover{filter:brightness(1.08)}
+button.run:disabled{opacity:.55;cursor:wait;box-shadow:none}
+.cmd{color:var(--acc2);margin:12px 0 0;word-break:break-all;font-size:12px}
+.cmd::before{content:"$ ";color:var(--mut)}
+.out-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;color:var(--mut);
+font-size:12px}
+.pill{font-size:11px;padding:1px 9px;border-radius:10px;border:1px solid var(--border)}
+.pill.ok{color:var(--ok);border-color:#1f5a35}.pill.bad{color:var(--err);border-color:#5a2420}
+pre.out{background:#02050a;border:1px solid var(--border);border-radius:8px;padding:14px;
+white-space:pre-wrap;word-break:break-word;max-height:58vh;overflow:auto;margin:0;
+color:var(--fg)}
 .note{color:var(--warn);font-size:12px;margin-top:8px}.muted{color:var(--mut)}
 .badge{font-size:11px;color:var(--mut);border:1px solid var(--border);border-radius:10px;
-padding:1px 8px;margin-left:6px}
+padding:1px 9px;margin-left:8px;vertical-align:middle}
 </style></head><body>
-<header><h1>hacking-vault</h1><span>local console - authorized use only</span></header>
+<header>
+  <span class="dots"><i></i><i></i><i></i></span>
+  <h1>root@<span class="host">hacking-vault</span>:<span class="path">~</span># <span class="cursor"></span></h1>
+  <div class="meta"><b id="count">0</b> tools loaded · loopback + key · authorized use only</div>
+</header>
 <div class="wrap">
-<aside id="side"></aside>
-<main id="main"><div class="card muted">Select a tool on the left.</div></main>
+  <aside>
+    <div class="search"><input id="q" type="text" autocomplete="off" spellcheck="false"
+      placeholder="filter tools... (/)"></div>
+    <div class="list" id="list"><div class="empty-hint" id="nohit">no tool matches that filter.</div></div>
+  </aside>
+  <main id="main">
+    <div class="welcome">
+      <pre>  _                _    _                            _ _
+ | |__   __ _  ___| | _(_)_ __   __ _  __   ____ _ _   _| | |_
+ | '_ \ / _` |/ __| |/ / | '_ \ / _` | \ \ / / _` | | | | | __|
+ | | | | (_| | (__|   <| | | | | (_| |  \ V / (_| | |_| | | |_
+ |_| |_|\__,_|\___|_|\_\_|_| |_|\__, |   \_/ \__,_|\__,_|_|\__|
+                                |___/</pre>
+      Pick a tool on the left, or hit <b>/</b> to filter. Each run executes locally
+      and streams its output below. Authorized / educational use only.
+    </div>
+  </main>
 </div>
 <script id="cfg" type="application/json">__CONFIG__</script>
 <script>
 const CFG=JSON.parse(document.getElementById('cfg').textContent);
 const AUTH=CFG.auth, TOOLS=CFG.tools;
-const side=document.getElementById('side'), main=document.getElementById('main');
+const list=document.getElementById('list'), main=document.getElementById('main');
+const nohit=document.getElementById('nohit');
+document.getElementById('count').textContent=TOOLS.length;
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>(
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
 const cats={};
 TOOLS.forEach(t=>(cats[t.category]=cats[t.category]||[]).push(t));
+const els=[];  // {tool, el, cat}
 for(const c in cats){
-  const h=document.createElement('h3');h.textContent=c;side.appendChild(h);
+  const sec=document.createElement('div');sec.className='cat';
+  const h=document.createElement('h3');
+  h.innerHTML=esc(c)+'<span class="n">'+cats[c].length+'</span>';
+  sec.appendChild(h);
   cats[c].forEach(t=>{
-    const d=document.createElement('div');d.className='tool';d.dataset.id=t.id;
-    d.innerHTML='<b>'+t.name+'</b><small>'+t.summary+'</small>';
-    d.onclick=()=>select(t,d);side.appendChild(d);
+    const d=document.createElement('div');d.className='tool';
+    d.innerHTML='<b>'+esc(t.name)+'</b><small>'+esc(t.summary)+'</small>';
+    d.onclick=()=>select(t,d);
+    sec.appendChild(d);els.push({tool:t,el:d,cat:sec});
   });
+  list.appendChild(sec);
 }
+
 function select(t,el){
-  document.querySelectorAll('.tool').forEach(x=>x.classList.remove('active'));
+  els.forEach(x=>x.el.classList.remove('active'));
   el.classList.add('active');render(t);
 }
-function render(t){
-  let f='<div class="card"><h2>'+t.name+' <span class="badge">'+t.category+
-    '</span></h2><div class="muted">'+t.summary+'</div>';
-  if(t.note)f+='<div class="note">'+t.note+'</div>';
-  f+='<form id="f">';
-  t.params.forEach(p=>{
-    const id='p_'+p.key;
-    if(p.kind==='flag'){
-      f+='<div class="chk"><input type="checkbox" id="'+id+'"><label for="'+id+
-        '" style="margin:0">'+p.label+'</label></div>';
-    }else if(p.kind==='choice'){
-      f+='<label>'+p.label+'</label><select id="'+id+'">'+
-        p.choices.map(c=>'<option value="'+c+'">'+(c||'(none)')+'</option>').join('')+
-        '</select>';
-    }else if(p.kind==='text'){
-      f+='<label>'+p.label+(p.required?' *':'')+'</label><textarea id="'+id+'"></textarea>';
-    }else{
-      f+='<label>'+p.label+(p.required?' *':'')+'</label><input type="text" id="'+id+
-        '" value="'+(p.default==null?'':p.default)+'">';
-    }
+
+function filter(q){
+  q=q.trim().toLowerCase();
+  const live=new Set();let any=false;
+  els.forEach(x=>{
+    const t=x.tool;
+    const hit=!q||(t.name+' '+t.summary+' '+t.id+' '+t.category).toLowerCase().includes(q);
+    x.el.style.display=hit?'':'none';
+    if(hit){live.add(x.cat);any=true;}
   });
-  f+='<button type="submit">Run</button></form>'+
-    '<div class="cmd" id="cmd"></div></div>'+
-    '<div class="card"><pre id="out" class="muted">(no output yet)</pre></div>';
+  document.querySelectorAll('.cat').forEach(s=>s.style.display=live.has(s)?'':'none');
+  nohit.style.display=any?'none':'block';
+}
+const q=document.getElementById('q');
+q.addEventListener('input',()=>filter(q.value));
+document.addEventListener('keydown',e=>{
+  if(e.key==='/'&&document.activeElement!==q){e.preventDefault();q.focus();}
+  if(e.key==='Escape'&&document.activeElement===q){q.value='';filter('');q.blur();}
+});
+
+function field(p){
+  const id='p_'+p.key, req=p.required?' <span style="color:var(--acc)">*</span>':'';
+  if(p.kind==='flag')
+    return '<div class="chk"><input type="checkbox" id="'+id+'">'+
+           '<label for="'+id+'">'+esc(p.label)+'</label></div>';
+  if(p.kind==='choice')
+    return '<label>'+esc(p.label)+req+'</label><select id="'+id+'">'+
+      p.choices.map(c=>'<option value="'+esc(c)+'">'+esc(c||'(none)')+'</option>').join('')+
+      '</select>';
+  if(p.kind==='text')
+    return '<label>'+esc(p.label)+req+'</label><textarea id="'+id+'"></textarea>';
+  return '<label>'+esc(p.label)+req+'</label><input type="text" id="'+id+
+         '" value="'+esc(p.default)+'">';
+}
+
+function render(t){
+  let f='<div class="card"><h2>'+esc(t.name)+
+    '<span class="badge">'+esc(t.category)+'</span></h2>'+
+    '<div class="muted">'+esc(t.summary)+'</div>';
+  if(t.note)f+='<div class="note">'+esc(t.note)+'</div>';
+  f+='<form id="f">'+t.params.map(field).join('')+
+    '<button type="submit" class="run">▶ Run</button></form>'+
+    '<div class="cmd" id="cmd" style="display:none"></div></div>'+
+    '<div class="card"><div class="out-head">output'+
+    '<span class="pill" id="pill" style="display:none"></span></div>'+
+    '<pre class="out muted" id="out">(no output yet)</pre></div>';
   main.innerHTML=f;
   document.getElementById('f').onsubmit=e=>{e.preventDefault();runTool(t);};
 }
+
 async function runTool(t){
   const values={};
   t.params.forEach(p=>{
     const el=document.getElementById('p_'+p.key);
     values[p.key]=p.kind==='flag'?el.checked:el.value;
   });
-  const btn=document.querySelector('button');btn.disabled=true;btn.textContent='Running...';
-  const out=document.getElementById('out');out.textContent='running...';out.className='';
+  const btn=document.querySelector('button.run');
+  btn.disabled=true;btn.textContent='running...';
+  const out=document.getElementById('out');out.textContent='running...';out.className='out';
+  const pill=document.getElementById('pill');pill.style.display='none';
   try{
     const r=await fetch('/api/run?k='+AUTH,{method:'POST',
       headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.id,values})});
     const d=await r.json();
-    document.getElementById('cmd').textContent='$ '+d.cmd;
-    out.textContent=(d.output||'(no output)')+'\n[exit '+d.rc+']';
+    const cmd=document.getElementById('cmd');
+    cmd.style.display='block';cmd.textContent=d.cmd;
+    out.textContent=d.output||'(no output)';
+    pill.style.display='inline-block';
+    pill.textContent='exit '+d.rc;pill.className='pill '+(d.rc===0?'ok':'bad');
   }catch(err){out.textContent='request failed: '+err;}
-  btn.disabled=false;btn.textContent='Run';
+  btn.disabled=false;btn.textContent='▶ Run';
 }
 </script></body></html>"""
 

@@ -96,7 +96,7 @@ def main():
     args = p.parse_args()
 
     if not args.url.lower().startswith(("http://", "https://")):
-        sys.exit("[-] URL must start with http:// or https://")
+        args.url = "http://" + args.url
     words = load_words(args.wordlist) if args.wordlist else BUILTIN
     exts = [e for e in args.ext.split(",") if e.strip()]
     try:

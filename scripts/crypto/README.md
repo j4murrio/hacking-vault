@@ -87,6 +87,27 @@ python3 jwt-tool.py eyJhbGci... --forge-none            # build an alg:none toke
 
 ---
 
+## `hashcrack.py` - dictionary attack against raw hashes
+
+**What it does:** the companion to `hashid` - once you know (or suspect) the scheme, throw a
+wordlist at the hash. Covers the unsalted schemes the standard library can compute: MD5,
+SHA1/224/256/384/512, SHA3-256/512 and, where the platform's OpenSSL still ships MD4, NTLM
+and MD4.
+
+**How it works:** with no `--algo` it hashes each word under every scheme whose digest length
+matches the target, so a bare hex hash needs no identification first. `--algo` pins one
+scheme; `--file` cracks a list of hashes in one run. A portable fallback for a box without
+`hashcat`/`john` - for large wordlists or salted/slow hashes, use those instead.
+
+```bash
+python3 hashcrack.py <hash> -w /usr/share/wordlists/rockyou.txt   # auto-detect scheme
+python3 hashcrack.py <hash> -a ntlm -w rockyou.txt                # force NTLM
+python3 hashcrack.py -f hashes.txt -w rockyou.txt                 # a whole list
+python3 hashcrack.py --list                                       # schemes this build can crack
+```
+
+---
+
 ## `hashid.py` - identify a hash and get the crack command
 
 **What it does:** tells you what kind of hash you are holding and prints the exact

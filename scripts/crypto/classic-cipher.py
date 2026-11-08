@@ -85,8 +85,12 @@ def get_data(args):
     else:
         raw = sys.stdin.buffer.read()
     if getattr(args, "hex", False):
-        raw = bytes.fromhex("".join(raw.decode("ascii", "ignore").split()))
-    return raw.strip() if not getattr(args, "hex", False) else raw
+        try:
+            raw = bytes.fromhex("".join(raw.decode("ascii", "ignore").split()))
+        except ValueError:
+            sys.exit("[-] --hex is set but the input is not valid hexadecimal")
+        return raw
+    return raw.strip()
 
 
 # ============================================================================
@@ -138,6 +142,8 @@ def cmd_xor(args):
 
 
 def cmd_vigenere(args):
+    if not args.key:
+        sys.exit("vigenere: --key is required")
     text = get_data(args).decode("utf-8", "backslashreplace")
     key = [ord(c.lower()) - 97 for c in args.key if c.isalpha()]
     if not key:
@@ -245,44 +251,52 @@ def main():
         sp.add_argument("text", nargs="?", help="input text ('-'/omit for stdin)")
         sp.add_argument("-f", "--file", help="read input from a file")
 
-    al = sub.add_parser("all", help="run every keyless cipher and rank (default)")
+    # Flags the flat menu/web form may send with any subcommand. Making them
+    # valid everywhere stops an inapplicable combo from erroring: get_data honours
+    # --hex for every mode, and the keyless ciphers simply ignore --brute/--key.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--hex", action="store_true", help="input is a hex string")
+    common.add_argument("--brute", action="store_true",
+                        help="brute-force the key (XOR, rail fence; Caesar brutes by default)")
+    common.add_argument("--key", help="key for XOR/Vigenere (ignored by keyless ciphers)")
+    common.add_argument("--key-hex", action="store_true", help="treat --key as hex (XOR)")
+
+    al = sub.add_parser("all", parents=[common],
+                        help="run every keyless cipher and rank (default)")
     add_input(al)
-    al.add_argument("--hex", action="store_true", help="input is a hex string")
     al.add_argument("--top", type=int, default=12, help="results to show (default 12)")
     al.add_argument("--all", action="store_true", help="show every candidate")
     al.set_defaults(func=cmd_all)
 
-    c = sub.add_parser("caesar", help="Caesar/ROT brute force or fixed shift")
+    c = sub.add_parser("caesar", parents=[common],
+                       help="Caesar/ROT brute force or fixed shift")
     add_input(c)
     c.add_argument("-s", "--shift", type=int, help="use a fixed shift instead of brute")
     c.add_argument("--all", action="store_true", help="show all 26 shifts")
     c.set_defaults(func=cmd_caesar)
 
-    x = sub.add_parser("xor", help="single-byte brute or repeating-key XOR")
+    x = sub.add_parser("xor", parents=[common],
+                       help="single-byte brute or repeating-key XOR")
     add_input(x)
-    x.add_argument("--hex", action="store_true", help="input is a hex string")
-    x.add_argument("--brute", action="store_true", help="brute single-byte key")
-    x.add_argument("--key", help="repeating key (string, or hex with --key-hex)")
-    x.add_argument("--key-hex", action="store_true", help="treat --key as hex")
     x.set_defaults(func=cmd_xor)
 
-    v = sub.add_parser("vigenere", help="Vigenere decrypt (or --encrypt)")
+    v = sub.add_parser("vigenere", parents=[common],
+                       help="Vigenere decrypt (or --encrypt)")
     add_input(v)
-    v.add_argument("-k", "--key", required=True, help="alphabetic key")
     v.add_argument("--encrypt", action="store_true", help="encrypt instead of decrypt")
     v.set_defaults(func=cmd_vigenere)
 
-    a = sub.add_parser("atbash", help="Atbash substitution")
+    a = sub.add_parser("atbash", parents=[common], help="Atbash substitution")
     add_input(a)
     a.set_defaults(func=cmd_atbash)
 
-    rf = sub.add_parser("railfence", help="rail-fence decrypt or brute rails")
+    rf = sub.add_parser("railfence", parents=[common],
+                        help="rail-fence decrypt or brute rails")
     add_input(rf)
     rf.add_argument("--rails", type=int, default=3, help="number of rails (default 3)")
-    rf.add_argument("--brute", action="store_true", help="try 2..10 rails")
     rf.set_defaults(func=cmd_railfence)
 
-    fq = sub.add_parser("freq", help="letter-frequency analysis")
+    fq = sub.add_parser("freq", parents=[common], help="letter-frequency analysis")
     add_input(fq)
     fq.set_defaults(func=cmd_freq)
 

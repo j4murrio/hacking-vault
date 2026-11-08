@@ -8,8 +8,10 @@ alone or beside others and on any OS. Run: python3 -m unittest -v (from repo roo
 """
 
 import base64
+import hashlib
 import importlib.util
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -32,6 +34,7 @@ jwt = load(SCRIPTS / "crypto" / "jwt-tool.py", "jwt_tool")
 cipher = load(SCRIPTS / "crypto" / "classic-cipher.py", "classic_cipher")
 encode = load(SCRIPTS / "crypto" / "encode.py", "encode_tool")
 fileinspect = load(SCRIPTS / "forensics" / "fileinspect.py", "fileinspect")
+hashcrack = load(SCRIPTS / "crypto" / "hashcrack.py", "hashcrack")
 
 
 def make_hs256(payload, secret, alg="HS256"):
@@ -143,6 +146,64 @@ class FileInspectTest(unittest.TestCase):
         data = b"\x00\x01flag{found_me}\xff\xfe"
         found = [s for _, s in fileinspect.extract_strings(data, 4)]
         self.assertIn("flag{found_me}", found)
+
+
+class CipherFormFlagsTest(unittest.TestCase):
+    """The menu/web form sends crypto.cipher flags (--brute/--hex/--key) with any
+    subcommand. Each must be accepted, or the form produces a 'rc 2' argparse
+    error. Exercises the real CLI so the parent-parser wiring is covered."""
+
+    SCRIPT = str(SCRIPTS / "crypto" / "classic-cipher.py")
+
+    def _run(self, *args):
+        return subprocess.run([sys.executable, self.SCRIPT, *args],
+                              capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL)
+
+    def test_shared_flags_accepted_by_every_subcommand(self):
+        # 'rc == 2' is argparse's "unrecognized arguments": the bug this guards.
+        for cmd in ("all", "caesar", "xor", "atbash", "railfence", "freq"):
+            r = self._run(cmd, "khoor", "--brute")
+            self.assertNotEqual(r.returncode, 2,
+                                f"{cmd} rejected --brute: {r.stderr}")
+
+    def test_hex_is_honoured_outside_xor(self):
+        # 6b686f6f72 = 'khoor'; caesar must decode the hex, not choke on --hex.
+        r = self._run("caesar", "6b686f6f72", "--hex")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("khoor", r.stdout)
+
+    def test_vigenere_without_key_fails_cleanly(self):
+        r = self._run("vigenere", "rijvs")
+        self.assertEqual(r.returncode, 1)
+        self.assertNotIn("Traceback", r.stderr)
+
+
+class HashCrackTest(unittest.TestCase):
+    """Cracking is a protection-relevant path; a miss on a present word is a real bug."""
+
+    def test_cracks_md5_from_wordlist(self):
+        target = hashlib.md5(b"banana").hexdigest()
+        with tempfile.TemporaryDirectory() as d:
+            wl = Path(d) / "w.txt"
+            wl.write_text("apple\ncherry\nbanana\ngrape\n", encoding="utf-8")
+            words = hashcrack.load_words(str(wl))
+        pw, algo = hashcrack.crack(target, words, hashcrack.candidates(target))
+        # Red if the loop stops early or the encoding drifts: banana is missed.
+        self.assertEqual((pw, algo), ("banana", "md5"))
+
+    def test_sha256_detected_by_length(self):
+        target = hashlib.sha256(b"flag").hexdigest()
+        self.assertIn("sha256", hashcrack.candidates(target))
+        pw, algo = hashcrack.crack(target, ["x", "flag", "y"],
+                                   hashcrack.candidates(target))
+        self.assertEqual((pw, algo), ("flag", "sha256"))
+
+    def test_absent_word_returns_none(self):
+        target = hashlib.sha1(b"absent").hexdigest()
+        pw, _ = hashcrack.crack(target, ["a", "b", "c"],
+                                hashcrack.candidates(target))
+        self.assertIsNone(pw)
 
 
 class ReportTest(unittest.TestCase):

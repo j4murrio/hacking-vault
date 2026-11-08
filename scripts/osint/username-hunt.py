@@ -17,10 +17,13 @@ Examples:
 """
 
 import argparse
+import string
 import sys
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+ALLOWED = set(string.ascii_letters + string.digits + "._-")
 
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
                      "(KHTML, like Gecko) Chrome/125.0 Safari/537.36"}
@@ -81,8 +84,13 @@ def check(site, username, timeout=8):
     return name, url, "absent"
 
 
+def normalize_username(name):
+    """Accept what people paste: trim spaces and a leading '@' (@johndoe)."""
+    return name.strip().lstrip("@")
+
+
 def valid_username(name):
-    return name and all(c.isalnum() or c in "._-" for c in name)
+    return bool(name) and all(c in ALLOWED for c in name)
 
 
 def main():
@@ -97,14 +105,15 @@ def main():
     p.add_argument("--timeout", type=float, default=8, help="per-site timeout s (default 8)")
     args = p.parse_args()
 
-    if not valid_username(args.username):
-        sys.exit("[-] Username may contain only letters, digits, '.', '_' and '-'.")
+    username = normalize_username(args.username)
+    if not valid_username(username):
+        sys.exit("[-] Username may contain only ASCII letters, digits, '.', '_' and '-'.")
 
-    print(f"[*] Hunting '{args.username}' across {len(SITES)} sites ...",
+    print(f"[*] Hunting '{username}' across {len(SITES)} sites ...",
           file=sys.stderr)
     found, errors = [], 0
     with ThreadPoolExecutor(max_workers=args.threads) as pool:
-        futures = [pool.submit(check, s, args.username, args.timeout) for s in SITES]
+        futures = [pool.submit(check, s, username, args.timeout) for s in SITES]
         for fut in as_completed(futures):
             name, url, state = fut.result()
             if state == "found":
